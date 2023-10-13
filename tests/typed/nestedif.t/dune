@@ -1,0 +1,16 @@
+(library
+ (name test_ifbool)
+ (wrapped false)
+ (modules nestedIf)
+ (flags
+  (:standard
+   ;-dsource
+   ;
+   ))
+ (preprocess
+  (pps
+   ;ppx_show
+   ppx_fields_conv)))
+
+(cram
+ (deps %{bin:zanuda.exe}))
