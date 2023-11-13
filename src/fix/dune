@@ -1,0 +1,17 @@
+(library
+ (name FixLints)
+ (libraries zanuda_core Tast_pattern)
+ (modules
+  Fix_lints
+  Asttype_visitor
+  Env_visitor
+  Ident_visitor
+  Lexing_visitor
+  Location_visitor
+  Longident_visitor
+  Path_visitor
+  Typedtree_visitor
+  Types_visitor
+  Refactoring)
+ (preprocess
+  (pps ppx_sexp_conv visitors.ppx)))
