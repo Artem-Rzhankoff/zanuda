@@ -47,36 +47,26 @@ let find_correspond_cmt filenames =
     s
   in
   let db = [%of_sexp: t list] s in
-  let get_library name =
-    List.find_map db ~f:(function
-      | Library l when String.equal name l.uid -> Some l
-      | _ -> None)
-  in
-  let on_module _ m found =
+  let on_module m found =
     List.fold
       [ m.impl, m.cmt; m.intf, m.cmti ]
       ~f:(fun acc ->
         function
         | Some source_filename, Some cmt_filename ->
-          List.fold ~init:acc filenames ~f:(fun acc1 f ->
-            if String.is_suffix ~suffix:f.loc_start.pos_fname source_filename
-            then List.cons (cmt_filename, f) acc1
-            else acc1)
+          let lint_loc = List.find filenames ~f:(fun f -> String.is_suffix ~suffix:f.loc_start.pos_fname source_filename) in 
+          begin match lint_loc with 
+            | Some loc -> List.cons (cmt_filename, loc) acc
+            | _ -> acc 
+          end
         | _ -> acc)
       ~init:found
   in
   let loop_database () =
     List.fold ~init:[] db ~f:(fun acc ->
         function
-        | Executables { modules; requires } | Library { Library.modules; requires } ->
-          let extra_paths =
-            requires
-            |> List.filter_map ~f:(fun uid -> get_library uid)
-            |> List.concat_map ~f:(fun { Library.include_dirs } -> include_dirs)
-          in
+        | Executables { modules; _ } | Library { Library.modules; _ } -> (* просто вот тут надо все модули разом передавать *)
           List.fold ~init:acc modules ~f:(fun acc1 m ->
-            if fine_module m then on_module extra_paths m acc1 else acc1)
-          (* за что отвечает fine_module ?? *)
+            if fine_module m then on_module m acc1 else acc1)
         | _ -> acc)
   in
   List.rev @@ loop_database ()
@@ -84,12 +74,9 @@ let find_correspond_cmt filenames =
 
 open Tast_pattern
 
-(* по локе находим соответствующую конструкцию и дальше по какой-то базе будем это преображать *)
 
 let find_by_loc (cmt_filename, (src_loc : Location.t)) =
   let cmt = Cmt_format.read_cmt cmt_filename in
-  (* List.iter cmt.cmt_comments ~f:(fun (s, loc) -> print_string @@ Printf.sprintf "wtf string:%s  loc:%d\n" s loc.loc_start.pos_lnum ) *)
-  (* сейчас надо понять, что передается в качетсве loc в tast_pattern и есть ли у меня сейчас шанс юзануть эту штучку *)
   match cmt.Cmt_format.cmt_annots with
   | Cmt_format.Implementation stru ->
     Refactoring.IfBool.visitor#visit_structure
@@ -101,13 +88,12 @@ let find_by_loc (cmt_filename, (src_loc : Location.t)) =
     sign
   | _ -> ()
 ;;
-
+(* можем ли мы как-то провалидировать линты?*)
 let foo ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path =
-  analyze_dir ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path; (* запускаем поиск всех линтов *)
+  analyze_dir ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path;
   let loc_lints = CollectedLints.loc_lints (fun (loc, _) -> loc) in
-  (* если a это ссылка на loc_lints, то почему при изменении a не меняется loc_lints *)
   Queue.filter_inplace ~f:(fun loc -> loc != Location.none) loc_lints;
-  let loc_lints = Base.Queue.to_list loc_lints in
+  let loc_lints = Base.Queue.to_list loc_lints in (* немного бе *)
   let plz = find_correspond_cmt loc_lints in
   (* let plz =
     List.filter plz ~f:(fun (f, loc) ->
