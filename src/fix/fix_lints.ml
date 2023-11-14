@@ -111,7 +111,7 @@ let foo ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path =
   let plz = find_correspond_cmt loc_lints in
   (* let plz =
     List.filter plz ~f:(fun (f, loc) ->
-      String.is_prefix ~prefix: "review/diff_parser.ml" loc.loc_start.pos_fname)
+      String.is_prefix ~prefix: "foo/main.ml" loc.loc_start.pos_fname)
   in
   *)
   List.iter plz ~f:(fun x -> find_by_loc x)

@@ -3,17 +3,20 @@ open Lexing
 open Warnings
 
 class ['self] result_iter =
-  object (_self : 'self)
+  object
     inherit ['self] Typedtree_visitor.iter
+    method! visit_array _f _env _xs = 
+      ()
   end
 
 let a = if true then true else false
 
 module rec IfBool : sig
   include module type of struct
-    let visitor : < visit_Closed : Location.t -> _ ; .. > =
+    let visitor : < visit_Closed : Location.t -> _ ; visit_tt_case: 'a. (Location.t -> 'a -> unit) -> Location.t -> 'a Typedtree_visitor.tt_case -> unit ; .. > =
       object (_self)
-        inherit [_] result_iter
+        inherit [_] result_iter (* все внимание на resul_iter*)
+        (* то есть получается, что где-то тут неизвествен тип visit_tt_case, и метод становится полиморфным*)
       end
     ;;
   end
@@ -21,6 +24,8 @@ end = struct
   let visitor =
     object (_self)
       inherit [_] result_iter as super
+
+
 
       method! visit_expression
         env
@@ -86,7 +91,7 @@ end
 
 module rec ProposeFunction : sig
   include module type of struct
-  let visitor : < visit_Closed : Location.t -> _ ; .. > =
+  let visitor : < visit_Closed : Location.t -> _ ; visit_tt_case : 'a. (Location.t -> 'a -> unit) -> Location.t -> 'a Typedtree_visitor.tt_case -> unit; .. > =
     object (_self)
       inherit [_] result_iter
     end
