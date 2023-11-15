@@ -30,6 +30,10 @@ let fine_module { impl } =
   | _ -> true
 ;;
 
+let available_lints = 
+  let open Refactoring in 
+  [(module IfBool : REFACTORING); (module ProposeFunction : REFACTORING)] 
+
 (* сохранять ли локи линтов просто во время работы линтера или заново добывать их при вызове фикса ??
    то есть cmt files уже можно сказать, что есть
    я бы сначала запускал зануду (все линты), но без распечатывания результата, а потом уже вот этот fix
@@ -79,13 +83,15 @@ let find_by_loc (cmt_filename, (src_loc : Location.t)) =
   let cmt = Cmt_format.read_cmt cmt_filename in
   match cmt.Cmt_format.cmt_annots with
   | Cmt_format.Implementation stru ->
-    Refactoring.IfBool.visitor#visit_structure
+    List.iter available_lints ~f:(fun (module L : Refactoring.REFACTORING) -> L.visitor#visit_structure src_loc stru)
+    (* Refactoring.IfBool.visitor#visit_structure
       src_loc
-      stru
+      stru*)
   | Cmt_format.Interface sign ->
-    Refactoring.IfBool.visitor#visit_signature
+    List.iter available_lints ~f:(fun (module L : Refactoring.REFACTORING) -> L.visitor#visit_signature src_loc sign)
+    (* Refactoring.IfBool.visitor#visit_signature
     src_loc
-    sign
+    sign*)
   | _ -> ()
 ;;
 (* можем ли мы как-то провалидировать линты?*)
@@ -93,7 +99,7 @@ let foo ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path =
   analyze_dir ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path;
   let loc_lints = CollectedLints.loc_lints (fun (loc, _) -> loc) in
   Queue.filter_inplace ~f:(fun loc -> loc != Location.none) loc_lints;
-  let loc_lints = Base.Queue.to_list loc_lints in (* немного бе *)
+  let loc_lints = Base.Queue.to_list loc_lints in (* немного бе, желательно просто очередь передать и уже ее сразу в нужную фигню преобразовать *)
   let plz = find_correspond_cmt loc_lints in
   (* let plz =
     List.filter plz ~f:(fun (f, loc) ->

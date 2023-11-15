@@ -19,6 +19,8 @@ and attributes = attribute list
   | Computation : (Base.computation [@opaque]) pattern_category*)
 and value = Base.value = Value_pattern
 
+and computation = Base.computation = Computation_pattern
+
 and 'k general_pattern = ('k Base.pattern_desc [@opaque]) pattern_data [@opaque]
 
 
@@ -84,11 +86,11 @@ and expression_desc = Base.expression_desc =
   | Texp_apply of expression * (Asttype_visitor.arg_label * expression option) list
   | Texp_match of
       expression
-      * (Base.computation Base.case[@opaque]) list
+      * (computation tt_case) list
       * partial (* ((Base.computation [@opaque]) [@opaque])*)
   | Texp_try of
       expression
-      * (Base.value Base.case[@opaque]) list (* ((Base.value [@opaque]) [@opaque])*)
+      * (value tt_case) list (* ((Base.value [@opaque]) [@opaque])*)
   | Texp_tuple of expression list
   | Texp_construct of
       Longident_visitor.longident_t loc
@@ -142,7 +144,7 @@ and expression_desc = Base.expression_desc =
       { let_ : binding_op
       ; ands : binding_op list
       ; param : Ident_visitor.ident_t
-      ; body : (Base.value Base.case[@opaque] (* ((Base.value [@opaque])[@opaque]) *))
+      ; body : (value tt_case[@opaque] (* ((Base.value [@opaque])[@opaque]) *))
       ; partial : partial
       }
   | Texp_unreachable
@@ -177,7 +179,7 @@ and function_param_kind =
 and function_body =
   | Tfunction_body of expression
   | Tfunction_cases of
-      { cases : (Base.value Base.case[@opaque]) list
+      { cases : (value tt_case) list
           (* ((Base.value [@opaque]) [@opaque]) *)
       ; partial : partial
       ; param : Ident_visitor.ident_t
