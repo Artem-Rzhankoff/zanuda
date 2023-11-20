@@ -2,7 +2,6 @@ open Parse
 open Lexing
 open Base
 open Warnings
-
 open Typedtree
 open Zanuda_core
 
@@ -30,9 +29,13 @@ let fine_module { impl } =
   | _ -> true
 ;;
 
-let available_lints = 
-  let open Refactoring in 
-  [(module IfBool : REFACTORING); (module ProposeFunction : REFACTORING)] 
+let available_lints =
+  let open Refactoring in
+  [ (module IfBool.Lint : Lint_refactoring.REFACTORING); (module ProposeFunction.Lint : Lint_refactoring.REFACTORING) ]
+;;
+
+
+
 
 (* сохранять ли локи линтов просто во время работы линтера или заново добывать их при вызове фикса ??
    то есть cmt files уже можно сказать, что есть
@@ -57,18 +60,21 @@ let find_correspond_cmt filenames =
       ~f:(fun acc ->
         function
         | Some source_filename, Some cmt_filename ->
-          let lint_loc = List.find filenames ~f:(fun f -> String.is_suffix ~suffix:f.loc_start.pos_fname source_filename) in 
-          begin match lint_loc with 
-            | Some loc -> List.cons (cmt_filename, loc) acc
-            | _ -> acc 
-          end
+          let lint_loc =
+            List.find filenames ~f:(fun f ->
+              String.is_suffix ~suffix:f.loc_start.pos_fname source_filename)
+          in
+          (match lint_loc with
+           | Some loc -> List.cons (cmt_filename, loc) acc
+           | _ -> acc)
         | _ -> acc)
       ~init:found
   in
   let loop_database () =
     List.fold ~init:[] db ~f:(fun acc ->
         function
-        | Executables { modules; _ } | Library { Library.modules; _ } -> (* просто вот тут надо все модули разом передавать *)
+        | Executables { modules; _ } | Library { Library.modules; _ } ->
+          (* просто вот тут надо все модули разом передавать *)
           List.fold ~init:acc modules ~f:(fun acc1 m ->
             if fine_module m then on_module m acc1 else acc1)
         | _ -> acc)
@@ -78,33 +84,59 @@ let find_correspond_cmt filenames =
 
 open Tast_pattern
 
-
 let find_by_loc (cmt_filename, (src_loc : Location.t)) =
+  let open Refactoring in
   let cmt = Cmt_format.read_cmt cmt_filename in
   match cmt.Cmt_format.cmt_annots with
   | Cmt_format.Implementation stru ->
-    List.iter available_lints ~f:(fun (module L : Refactoring.REFACTORING) -> L.visitor#visit_structure src_loc stru)
+    List.iter available_lints ~f:(fun (module L : Lint_refactoring.REFACTORING) ->
+      L.visitor#visit_structure src_loc stru)
     (* Refactoring.IfBool.visitor#visit_structure
-      src_loc
-      stru*)
+       src_loc
+       stru*)
   | Cmt_format.Interface sign ->
-    List.iter available_lints ~f:(fun (module L : Refactoring.REFACTORING) -> L.visitor#visit_signature src_loc sign)
+    List.iter available_lints ~f:(fun (module L : Lint_refactoring.REFACTORING) ->
+      L.visitor#visit_signature src_loc sign)
     (* Refactoring.IfBool.visitor#visit_signature
-    src_loc
-    sign*)
+       src_loc
+       sign*)
   | _ -> ()
 ;;
+
 (* можем ли мы как-то провалидировать линты?*)
 let foo ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path =
   analyze_dir ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path;
   let loc_lints = CollectedLints.loc_lints (fun (loc, _) -> loc) in
   Queue.filter_inplace ~f:(fun loc -> loc != Location.none) loc_lints;
-  let loc_lints = Base.Queue.to_list loc_lints in (* немного бе, желательно просто очередь передать и уже ее сразу в нужную фигню преобразовать *)
+  let loc_lints = Base.Queue.to_list loc_lints in
+  (* немного бе, желательно просто очередь передать и уже ее сразу в нужную фигню преобразовать *)
   let plz = find_correspond_cmt loc_lints in
   (* let plz =
-    List.filter plz ~f:(fun (f, loc) ->
-      String.is_prefix ~prefix: "foo/main.ml" loc.loc_start.pos_fname)
-  in
+     List.filter plz ~f:(fun (f, loc) ->
+     String.is_prefix ~prefix: "foo/main.ml" loc.loc_start.pos_fname)
+     in
   *)
   List.iter plz ~f:(fun x -> find_by_loc x)
 ;;
+
+let a x = match x with 1 -> true | _ -> false
+(*
+   let a x = match x with 1 -> true | _ -> false
+   let a   =     function 1 -> true | _ -> false
+*)
+(*
+   let a = fun x -> match x with 1 -> true | _ -> false
+   let a =              function 1 -> true | _ -> false
+*)
+
+(*
+let a x y = if true then x else y
+let a x y = x
+*)
+
+(*
+let a x = if x then true else false
+let a x = x
+*)
+
+let a x = if (x && true) then x else false
