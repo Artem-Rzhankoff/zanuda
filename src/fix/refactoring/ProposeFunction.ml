@@ -1,13 +1,45 @@
 open Visitors
 open Tast_pattern
 open Lint_refactoring
-open Base
+open Utils
+open Ident
 
-let first_case_loc (cs : case_comp list) = 
-  let c = List.nth cs 0 in 
-  match c with
-  | Some s -> (s.c_lhs.pat_loc.loc_start.pos_lnum, (s.c_lhs.pat_loc.loc_start.pos_cnum - s.c_lhs.pat_loc.loc_start.pos_bol))
-  | _ -> failwith "invalid_arg"
+let first_case cs =
+  let open Typedtree in
+  List.nth cs 0
+;;
+
+let get_match_constr_payload ematch_case =
+  let open Typedtree in
+  let e =
+    let c = first_case ematch_case in
+    c.c_rhs
+  in
+  let fname = e.exp_loc.loc_start.pos_fname in
+  let pat = texp_match (texp_ident __) __ in
+  parse
+    pat
+    e.exp_loc
+    e
+    (fun _ cs () ->
+      let pat =
+        let c = first_case cs in
+        c.c_lhs
+      in
+      get_payload_pf fname e.exp_loc pat.pat_loc Start Start)
+    ()
+;;
+
+let get_propose_function_payload ematch_case = 
+  let open Typedtree in
+  let extra_arg = 
+    let c = first_case ematch_case in
+    c.c_lhs 
+  in
+  let fname = extra_arg.pat_loc.loc_start.pos_fname in
+  get_payload_pf fname extra_arg.pat_loc extra_arg.pat_loc Start End
+
+
 
 let no_ident ident c =
   let exception Found in
@@ -84,7 +116,8 @@ end = struct
         | Texp_function
             { arg_label = _arg_label; param = _param; cases = _cases; partial = _partial }
           ->
-          let pat = (* тут надо match находить или шо*)
+          let pat =
+            (* тут надо match находить или шо*)
             let open Tast_pattern in
             texp_function (case (tpat_var __) none (texp_match (texp_ident __) __) ^:: nil)
           in
@@ -94,22 +127,15 @@ end = struct
             ~on_error:(fun _desc () -> ())
             this
             (fun argname ident cases () ->
-              begin match ident with
+              match ident with
               | Path.Pident id ->
                 if String.equal argname (Ident.name id)
-                   && List.for_all cases ~f:(fun c -> no_ident id c)
-                then
-                  let a, b = first_case_loc cases in 
-                  print_string
-                  @@ Printf.sprintf
-                       "propose_function start file: %s line: %d col: %d  end line: %d col: %d \n"
-                       exp_loc.loc_start.pos_fname
-                       exp_loc.loc_start.pos_lnum
-                       (exp_loc.loc_start.pos_cnum - exp_loc.loc_start.pos_bol)
-                       a b
-              | _ -> () end)
+                   && List.for_all (fun c -> no_ident id c) cases
+                then (get_match_constr_payload _cases; get_propose_function_payload _cases)
+              | _ -> ())
             ();
-          super#visit_expression env this (* without this call it doesn't traverse nested function construction. Why? *)
+          super#visit_expression env this
+          (* without this call it doesn't traverse nested function construction. Why? *)
         | _ ->
           ();
           super#visit_expression env this
@@ -117,27 +143,17 @@ end = struct
   ;;
 end
 
+(* от начала последнего аргумента до равно и от начала match до конца with *)
 let a x y =
   match y with
   | 1 -> true
   | _ -> x
 ;;
 
-(*  
-let a x = 
-  function    |
-  | 1 -> true
-  | _ -> x
+(*
+   let a x =
+   function    |
+   1 -> true
+   | _ -> x
 *)
 
-let a = fun x y -> match y with 1 -> true | _ -> x
-(*
-let a = fun x |*)
-(* нужна лока параметра и первого варианта
-   let a x = match x with 1 -> true | _ -> false
-   let a   =     function 1 -> true | _ -> false
-*)
-(* нужна лока
-   let a = fun x -> match x with 1 -> true | _ -> false
-   let a =              function 1 -> true | _ -> false
-*)

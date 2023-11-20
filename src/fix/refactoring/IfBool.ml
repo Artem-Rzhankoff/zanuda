@@ -1,43 +1,15 @@
 open Visitors
 open Typedtree
-
-type pos =
-  | Start
-  | End
+open Utils
 
 type ite =
   | If
   | Then
   | Else
 
-let get_loc (e : Location.t) = function
-  | Start -> e.loc_start.pos_lnum, e.loc_start.pos_cnum - e.loc_start.pos_bol
-  | End -> e.loc_end.pos_lnum, e.loc_end.pos_cnum - e.loc_end.pos_bol
-;;
-
 let bool_value e =
   let open Tast_pattern in
   parse ebool e.exp_loc ~on_error:(fun _ () -> None) e (fun b () -> Some b) ()
-;;
-
-let printt fname sl sc el ec =
-  print_string
-  @@ Printf.sprintf
-       "if_bool file: %s  start line: %d col: %d  end line: %d end: %d\n"
-       fname
-       sl
-       sc
-       el
-       ec
-;;
-
-let get_payload fname e1 e2 p =
-  let (sl1, sc1), (el1, ec1) = get_loc e1.exp_loc p, get_loc e2.exp_loc p in
-  printt fname sl1 sc1 el1 ec1
-;;
-
-let get_payload2 fname e1 e2 =
-  List.iter (fun (e1, e2, p) -> get_payload fname e1 e2 p) [ e1, e2, Start; e2, e1, End ]
 ;;
 
 let check_bool e args vbool =
@@ -52,13 +24,13 @@ let check_bool e args vbool =
       e1.exp_loc
       ~on_error:(fun _ () ->
         match vbool with
-        | true -> get_payload fname e1 e2 End
-        | false -> get_payload fname e1 e2 Start)
+        | true -> get_payload fname e1.exp_loc e2.exp_loc End End
+        | false -> get_payload fname e1.exp_loc e2.exp_loc Start Start)
       e1
       (fun _ () ->
         match vbool with
-        | true -> get_payload fname e1 e2 Start
-        | false -> get_payload fname e1 e2 End)
+        | true -> get_payload fname e1.exp_loc e2.exp_loc Start Start
+        | false -> get_payload fname e1.exp_loc e2.exp_loc End End)
       ()
   | _ -> failwith "invalid_arg"
 ;;
@@ -68,16 +40,16 @@ let get_ite_loc e ie te ee (pbool_site, ebool) =
   let match_ite = function
     | If, true, _ ->
       (* if true then x else y --> x *)
-      get_payload2 fname e te
+      get_payload2 fname e.exp_loc te.exp_loc
     | If, false, _ (* if false then x else y --> y *)
     | Then, true, Some true (* if val then true else true --> true *)
     | Then, false, Some false ->
       (* if val then false else false --> false*)
-      get_payload2 fname e ee
+      get_payload2 fname e.exp_loc ee.exp_loc
     | Then, true, Some false (* if val then true else false --> val *)
     | Then, false, Some true ->
       (* if val then false else true --> not val *)
-      get_payload2 fname e ie
+      get_payload2 fname e.exp_loc ie.exp_loc
     | _ ->
       (* previous p-m covers cases when ebool was parsed in then-e*)
       ()
