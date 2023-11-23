@@ -15,7 +15,6 @@ let get_match_constr_payload ematch_case =
     let c = first_case ematch_case in
     c.c_rhs
   in
-  let fname = e.exp_loc.loc_start.pos_fname in
   let pat = texp_match (texp_ident __) __ in
   parse
     pat
@@ -26,20 +25,22 @@ let get_match_constr_payload ematch_case =
         let c = first_case cs in
         c.c_lhs
       in
-      get_payload_pf fname e.exp_loc pat.pat_loc Start Start)
+      let cloc = gen_loc e.exp_loc pat.pat_loc (Start, Start) in
+      let funcloc = gen_constr_loc e.exp_loc 8 in
+      set_payload_pf { location = {cloc with loc_start = {cloc.loc_start with pos_cnum = cloc.loc_start.pos_cnum + 8}}; payload = Default };
+      set_payload_pf { location = funcloc; payload = Padding "function" })
     ()
 ;;
 
-let get_propose_function_payload ematch_case = 
+let get_propose_function_payload ematch_case =
   let open Typedtree in
-  let extra_arg = 
+  let extra_arg =
     let c = first_case ematch_case in
-    c.c_lhs 
+    c.c_lhs
   in
-  let fname = extra_arg.pat_loc.loc_start.pos_fname in
-  get_payload_pf fname extra_arg.pat_loc extra_arg.pat_loc Start End
-
-
+  let cloc = gen_loc extra_arg.pat_loc extra_arg.pat_loc (Start, End) in
+  set_payload_pf { location = cloc; payload = Default }
+;;
 
 let no_ident ident c =
   let exception Found in
@@ -117,11 +118,9 @@ end = struct
             { arg_label = _arg_label; param = _param; cases = _cases; partial = _partial }
           ->
           let pat =
-            (* тут надо match находить или шо*)
-            let open Tast_pattern in
             texp_function (case (tpat_var __) none (texp_match (texp_ident __) __) ^:: nil)
           in
-          Tast_pattern.parse
+          parse
             pat
             exp_loc
             ~on_error:(fun _desc () -> ())
@@ -131,7 +130,9 @@ end = struct
               | Path.Pident id ->
                 if String.equal argname (Ident.name id)
                    && List.for_all (fun c -> no_ident id c) cases
-                then (get_match_constr_payload _cases; get_propose_function_payload _cases)
+                then (
+                  get_match_constr_payload _cases;
+                  get_propose_function_payload _cases)
               | _ -> ())
             ();
           super#visit_expression env this
@@ -143,17 +144,8 @@ end = struct
   ;;
 end
 
-(* от начала последнего аргумента до равно и от начала match до конца with *)
 let a x y =
   match y with
   | 1 -> true
   | _ -> x
 ;;
-
-(*
-   let a x =
-   function    |
-   1 -> true
-   | _ -> x
-*)
-

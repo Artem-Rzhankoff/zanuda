@@ -34,18 +34,8 @@ let available_lints =
   [ (module IfBool.Lint : Lint_refactoring.REFACTORING); (module ProposeFunction.Lint : Lint_refactoring.REFACTORING) ]
 ;;
 
-
-
-
-(* сохранять ли локи линтов просто во время работы линтера или заново добывать их при вызове фикса ??
-   то есть cmt files уже можно сказать, что есть
-   я бы сначала запускал зануду (все линты), но без распечатывания результата, а потом уже вот этот fix
-   узнать, что будет, если сначал вызывали линтер обычной командой, а потом вызывем фикс без изменения директории
-   будут запускаться все линты или есть какое-то хэширование??
-*)
 open LoadDune
 
-(* loc надо будет заменить на то, что действительно понадобится в дальнейшем, чтоб лишнее не гонять *)
 let find_correspond_cmt filenames =
   let s =
     let ch = Unix.open_process_in "dune describe" in
@@ -91,52 +81,23 @@ let find_by_loc (cmt_filename, (src_loc : Location.t)) =
   | Cmt_format.Implementation stru ->
     List.iter available_lints ~f:(fun (module L : Lint_refactoring.REFACTORING) ->
       L.visitor#visit_structure src_loc stru)
-    (* Refactoring.IfBool.visitor#visit_structure
-       src_loc
-       stru*)
   | Cmt_format.Interface sign ->
     List.iter available_lints ~f:(fun (module L : Lint_refactoring.REFACTORING) ->
       L.visitor#visit_signature src_loc sign)
-    (* Refactoring.IfBool.visitor#visit_signature
-       src_loc
-       sign*)
   | _ -> ()
 ;;
 
-(* можем ли мы как-то провалидировать линты?*)
 let foo ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path =
   analyze_dir ~untyped:analyze_untyped ~cmt:analyze_cmt ~cmti:analyze_cmti path;
   let loc_lints = CollectedLints.loc_lints (fun (loc, _) -> loc) in
   Queue.filter_inplace ~f:(fun loc -> loc != Location.none) loc_lints;
   let loc_lints = Base.Queue.to_list loc_lints in
-  (* немного бе, желательно просто очередь передать и уже ее сразу в нужную фигню преобразовать *)
   let plz = find_correspond_cmt loc_lints in
-  (* let plz =
+  let plz =
      List.filter plz ~f:(fun (f, loc) ->
      String.is_prefix ~prefix: "foo/main.ml" loc.loc_start.pos_fname)
-     in
-  *)
-  List.iter plz ~f:(fun x -> find_by_loc x)
+  in
+  let acc = List.fold_left plz ~f:(fun acc x -> find_by_loc x; ( (+) acc 1)) ~init:0 in
+  Replacement.Repl.apply_all acc
 ;;
 
-let a x = match x with 1 -> true | _ -> false
-(*
-   let a x = match x with 1 -> true | _ -> false
-   let a   =     function 1 -> true | _ -> false
-*)
-(*
-   let a = fun x -> match x with 1 -> true | _ -> false
-   let a =              function 1 -> true | _ -> false
-*)
-
-(*
-let a x y = if true then x else y
-let a x y = x
-*)
-
-(*
-let a x = if x then true else false
-let a x = x
-*)
-
-let a x = if (x && true) then x else false

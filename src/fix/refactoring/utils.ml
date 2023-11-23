@@ -1,49 +1,44 @@
 open Location
 open Typedtree
+open Replacement.Repl.OrderedType
+open Replacement.Repl 
 
 type pos =
   | Start
   | End
 
-let printt fname sl sc el ec =
-  print_string
-  @@ Printf.sprintf
-       "if_bool file: %s  start line: %d col: %d  end line: %d end: %d\n"
-       fname
-       sl
-       sc
-       el
-       ec
+let gen_loc spoint epoint = function
+  | Start, Start ->
+    { loc_start = spoint.loc_start; loc_end = epoint.loc_start; loc_ghost = false }
+  | Start, End ->
+    { loc_start = spoint.loc_start; loc_end = epoint.loc_end; loc_ghost = false }
+  | End, Start ->
+    { loc_start = spoint.loc_end; loc_end = epoint.loc_start; loc_ghost = false }
+  | End, End ->
+    { loc_start = spoint.loc_end; loc_end = epoint.loc_end; loc_ghost = false }
 ;;
 
-let get_loc e = function
-  | Start -> e.loc_start.pos_lnum, e.loc_start.pos_cnum - e.loc_start.pos_bol
-  | End -> e.loc_end.pos_lnum, e.loc_end.pos_cnum - e.loc_end.pos_bol
+let gen_constr_loc point offset = 
+  let open Lexing in
+  let loc_start = point.loc_start in
+  let loc_end = {pos_fname = loc_start.pos_fname; pos_lnum = loc_start.pos_lnum; pos_bol = loc_start.pos_bol; pos_cnum = loc_start.pos_cnum + offset} in
+  {point with loc_end = loc_end }
+  
+
+let print_pf {location; payload} label = 
+  let fname = location.loc_start.pos_fname in
+  let sl, sc = location.loc_start.pos_lnum, (location.loc_start.pos_cnum - location.loc_start.pos_bol) in
+  let el, ec = location.loc_end.pos_lnum, (location.loc_end.pos_cnum - location.loc_end.pos_bol) in
+  let padding = match payload with Default -> "" | Padding s -> s in
+  print_string @@ Printf.sprintf "%s file: %s  start: (%d, %d)   end: (%d, %d) payload: |%s| \n" label fname sl sc el ec padding;;
+
+let set_payload_pf ({location; payload} as r) = 
+  print_pf {location; payload} "propose_function";
+  Replacement.Repl.add location.loc_start.pos_fname r
 ;;
 
-let get_payload fname point1 point2 pos1 pos2 =
-  let (sl1, sc1), (el1, ec1) = get_loc point1 pos1, get_loc point2 pos2 in
-  printt fname sl1 sc1 el1 ec1
+let set_payload_bool ({location; payload} as r) = 
+  print_pf {location; payload} "if_bool";
+    Replacement.Repl.add location.loc_start.pos_fname r
 ;;
 
-let get_payload2 fname point1 point2 =
-  List.iter (fun (e1, e2, p) -> get_payload fname e1 e2 p p) [ point1, point2, Start; point2, point1, End ]
-;;
-
-(* ------------------------ *)
-
-let printt_pf fname sl sc el ec =
-  print_string
-  @@ Printf.sprintf
-       "propose_function file: %s  start line: %d col: %d  end line: %d end: %d\n"
-       fname
-       sl
-       sc
-       el
-       ec
-;;
-
-let get_payload_pf fname point1 point2 pos1 pos2 =
-  let (sl1, sc1), (el1, ec1) = get_loc point1 pos1, get_loc point2 pos2 in
-  printt_pf fname sl1 sc1 el1 ec1
-;;
