@@ -1,3 +1,7 @@
+(** Copyright 2021-2023, Kakadu. *)
+
+(** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
 (* let lookup line_of_pos parsed ~file ~line =
   (* Format.printf "Parsed stuff:@[%a@]\n%!" [%show: Types.file_info list] parsed; *)
   let open Types in
@@ -51,6 +55,12 @@ let () =
     [ "-", Arg.Unit (fun () -> cfg.from <- None), " use stdin"
     ; "-f", Arg.String (fun s -> cfg.file <- Some s), " lookup for file"
     ; "-l", Arg.Int (fun n -> cfg.line <- Some n), " lookup for line in a file"
+    ; ( "-vdp"
+      , Arg.Unit (fun () -> Diff_parser.set_logging true)
+      , " Enable logging in the diff parser" )
+    ; ( "-vlp"
+      , Arg.Unit (fun () -> Line_parser.set_logging true)
+      , " Enable logging in the line parser" )
     ]
     (fun _ -> assert false)
     " "
@@ -92,7 +102,9 @@ let () =
             "Got something. It should be at %d lines below from the first chunk header \
              of file in diff\n"
             diff_pos
-        | None -> Format.eprintf "Couldn't find it.\n")
+        | None -> Format.eprintf "Can't find '%s' line %d in the diff\n" file line)
      | _ -> Format.eprintf "File or line was not initialized\n")
-  | Error s -> Format.eprintf "Parsing failed: %s\n" s
+  | Error s ->
+    Format.eprintf "Parsing failed: %s\n" s;
+    exit 1
 ;;

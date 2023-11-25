@@ -1,3 +1,7 @@
+(** Copyright 2021-2023, Kakadu. *)
+
+(** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
 (* https://docs.github.com/en/rest/pulls/reviews#create-a-review-for-a-pull-request *)
 
 let _example () =
@@ -32,10 +36,12 @@ let info =
 
 open Printf
 
+let github_patch_url ~owner ~repo ~pull_number =
+  Printf.sprintf "https://api.github.com/repos/%s/%s/pulls/%d" owner repo pull_number
+;;
+
 let get_diff ~owner ~repo ~pull_number =
-  let url =
-    Printf.sprintf "https://api.github.com/repos/%s/%s/pulls/%d" owner repo pull_number
-  in
+  let url = github_patch_url ~owner ~repo ~pull_number in
   let headers = [ "Accept", "application/vnd.github.diff" ] in
   match Curly.(run (Request.make ~headers ~url ~meth:`GET ())) with
   | Ok x -> Some x.Curly.Response.body
@@ -53,6 +59,12 @@ let create_review info =
     (match get_diff ~owner ~repo ~pull_number with
      | Some diff ->
        (match Diff_parser.parse_string diff with
+        | Error e_parse ->
+          Format.eprintf "Parsing failed: %s\n" e_parse;
+          Format.eprintf
+            "of a diff from '%s'\n"
+            (github_patch_url ~owner ~repo ~pull_number);
+          exit 1
         | Result.Ok parsed ->
           let parse_json json =
             let open Yojson.Basic.Util in
@@ -102,8 +114,7 @@ let create_review info =
            | Ok x ->
              Format.printf "status: %d\n" x.Curly.Response.code;
              Format.printf "body: %s\n" x.Curly.Response.body
-           | Error e_api -> Format.eprintf "Failed: %a\n" Curly.Error.pp e_api)
-        | Error e_parse -> Format.eprintf "Parsing failed: %s\n" e_parse)
+           | Error e_api -> Format.eprintf "Failed: %a\n" Curly.Error.pp e_api))
      | None -> ())
   | _ -> Format.eprintf "Some argument was not initialized\n"
 ;;

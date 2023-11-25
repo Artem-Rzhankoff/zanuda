@@ -6,6 +6,7 @@ description:
 maintainer: ["kakadu@pm.me"]
 authors: ["Kakadu"]
 license: "LGPL-3.0-only"
+tags: ["lint" "test"]
 homepage: "https://github.com/Kakadu/zanuda"
 bug-reports: "https://github.com/Kakadu/zanuda/issues"
 depends: [
@@ -21,6 +22,7 @@ depends: [
   "angstrom" {>= "0.15.0"}
   "base" {with-test}
   "ppx_fields_conv" {with-test}
+  "ppx_deriving" {with-test}
   "ppx_blob" {with-test}
   "menhir" {with-test}
   "ocamlformat" {= "0.26.1" & dev}

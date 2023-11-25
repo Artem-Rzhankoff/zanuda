@@ -13,6 +13,7 @@ let untyped_linters =
   let open UntypedLints in
   [ (module Casing : LINT.UNTYPED)
   ; (module ParsetreeHasDocs : LINT.UNTYPED)
+  ; (module UntypedLints.Propose_function : LINT.UNTYPED)
   ; (module ToplevelEval : LINT.UNTYPED)
   ; (module VarShouldNotBeUsed : LINT.UNTYPED)
   ; (module UntypedLints.Dollar : LINT.UNTYPED)
@@ -22,7 +23,8 @@ let untyped_linters =
 let typed_linters =
   let open TypedLints in
   [ (* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *)
-    (module ExcTryWithWildcard : LINT.TYPED)
+    (module AmbiguousConstructors : LINT.TYPED)
+  ; (module ExcTryWithWildcard : LINT.TYPED)
   ; (module Equality : LINT.TYPED)
   ; (module Failwith : LINT.TYPED)
   ; (module If_bool : LINT.TYPED)
@@ -144,9 +146,9 @@ let process_cmt_typedtree filename typedtree =
 
 let process_cmti_typedtree filename typedtree =
   (* if Config.Options.verbose ()
-  then (
-    let () = printfn "Analyzing cmti: %s" filename in
-    printfn "%a" Printtyped.interface typedtree); *)
+     then (
+     let () = printfn "Analyzing cmti: %s" filename in
+     printfn "%a" Printtyped.interface typedtree); *)
   (* Format.printf "Typedtree MLI:\n%a\n%!" Printtyped.interface typedtree; *)
   with_info filename (fun info ->
     process_per_file_linters_sig info typedtree;
@@ -192,6 +194,22 @@ let process_untyped filename =
             Caml.__LINE__
         in
         Caml.exit 1)))
+;;
+
+let () =
+  let config_filename = ".zanuda" in
+  if Caml.Sys.file_exists config_filename
+  then (
+    let s = In_channel.with_open_text config_filename In_channel.input_all in
+    String.split s ~on:'\n'
+    |> List.iter ~f:(fun s ->
+      if String.is_empty s
+      then ()
+      else if String.is_prefix s ~prefix:"-no-"
+      then (
+        let lint_name = String.chop_prefix_exn s ~prefix:"-no-" in
+        Config.(Hash_set.remove opts.enabled_lints lint_name))
+      else Format.eprintf ".zanuda: Don't know what to do with %S\n%!" s))
 ;;
 
 let () =

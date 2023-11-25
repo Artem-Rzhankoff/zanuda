@@ -20,6 +20,8 @@
  (synopsis "OCaml linter experiment")
  (description
   "Inspired by https://discuss.ocaml.org/t/how-possible-is-a-clippy-like-linter-for-ocaml")
+ (tags
+  (lint test))
  (depends
   (ocaml
    (and
@@ -41,10 +43,11 @@
    (>= 0.15.0))
   (base :with-test)
   (ppx_fields_conv :with-test)
+  (ppx_deriving :with-test)
   (ppx_blob :with-test) ; currently required for ToplevelEval test
   (menhir :with-test)
   (ocamlformat
-  (and
+   (and
     (= 0.26.1)
     :dev))))
 
