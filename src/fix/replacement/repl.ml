@@ -137,8 +137,11 @@ let apply_all _ =
   in
   List.iter
     (fun (fpath, payload) ->
-      match Sys.command (Format.sprintf "echo '%s' > %s" payload fpath) with
+      (* match Sys.command (Format.sprintf "echo '%s' > %s" payload fpath) with
       | 0 -> ()
-      | _ -> print_string "damn\n")
+      | _ -> print_string "damn\n";
+      *)
+      let oc = open_out fpath in 
+      Printf.fprintf oc "%s" payload)
     new_payloads
 ;;
