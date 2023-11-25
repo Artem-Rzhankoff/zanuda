@@ -38,7 +38,8 @@
   Tast_pattern
   zanuda_core
   TypedLints
-  UntypedLints)
+  UntypedLints
+  FixLints)
  (preprocess
   (pps ppx_inline_test))
  (instrumentation

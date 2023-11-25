@@ -6,7 +6,6 @@ class ['self] result_iter =
   object
     inherit ['self] Typedtree_visitor.iter
     method! visit_array _f _env _xs = ()
-    (* тут наверное определить visit_expression, где будут находить выражение по локе*)
   end
 
 let a = if true then true else false

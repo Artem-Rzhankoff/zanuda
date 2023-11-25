@@ -57,15 +57,15 @@ let space_padding loc flines =
     padding
   | false ->
     let padding =
-      String.make (String.length flines.(sline - 1) - scol) ' ' |> fun s -> s ^ "\n"
+      String.make (String.length flines.(sline - 1) - scol) ' ' |> fun s -> Format.sprintf "%s\n" s
     in
     let padding =
       Array.fold_left
-        (fun pad s -> pad ^ String.make (String.length s) ' ' ^ "\n")
+        (fun pad s -> Format.sprintf "%s%s\n" pad (String.make (String.length s) ' '))
         padding
         (Array.sub flines sline (eline - sline - 1))
     in
-    let padding = padding ^ String.make ecol ' ' in
+    let padding = Format.sprintf "%s%s" padding (String.make ecol ' ') in
     padding
 ;;
 
@@ -88,8 +88,8 @@ let payload_between_repls (loc_end_buf, loc_start_repl) flines buf =
       in
       let lines =
         Array.fold_left
-          (fun ls l -> ls ^ l ^ "\n")
-          (lines ^ "\n")
+          (fun ls l -> Format.sprintf "%s%s\n" ls l) 
+          (Format.sprintf "%s%s" lines "\n")
           (Array.sub flines end_buf_line (repl_line - end_buf_line - 1))
       in
       let lines = lines ^ String.sub flines.(repl_line - 1) 0 repl_col in
@@ -100,7 +100,6 @@ let payload_between_repls (loc_end_buf, loc_start_repl) flines buf =
 ;;
 
 let apply_all repls fcontent =
-  (* начинаем заполнять файл*)
   let flines = Array.of_list (String.split_on_char '\n' fcontent) in
   let cur = ref { dummy_pos with pos_lnum = 1; pos_cnum = 0; pos_bol = 0 } in
   let apply_repl { location = { loc_start; loc_end; _ } as loc; payload } buf =
@@ -126,6 +125,7 @@ let apply_all repls fcontent =
   Buffer.contents buf
 ;;
 
+(*[TEMPORARY] we plan use a combination if dune diff and promote (maybe git variant) for user preview*)
 let apply_all _ =
   let file_content fname = In_channel.with_open_text fname In_channel.input_all in
   let new_payloads =
@@ -137,10 +137,7 @@ let apply_all _ =
   in
   List.iter
     (fun (fpath, payload) ->
-      let pcs = List.hd (String.split_on_char '.' fpath) in
-      let pcs = String.split_on_char '/' pcs in
-      let fname = List.nth pcs (List.length pcs - 1) ^ ".txt" in
-      match Sys.command (Format.sprintf "echo '%s' > %s" payload fname) with
+      match Sys.command (Format.sprintf "echo '%s' > %s" payload fpath) with
       | 0 -> ()
       | _ -> print_string "damn\n")
     new_payloads

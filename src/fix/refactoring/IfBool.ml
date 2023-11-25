@@ -12,8 +12,24 @@ let bool_value e =
   parse ebool e.exp_loc ~on_error:(fun _ () -> None) e (fun b () -> Some b) ()
 ;;
 
-let check_bool e args vbool =
-  let fname = e.exp_loc.loc_start.pos_fname in
+type fix_kind =
+  | Unwise_conjuction
+  | Unwise_ite
+
+let msg = function
+  | Unwise_conjuction ->
+    Format.sprintf
+      "(Fix `If_bool` lint)\n%s"
+      "This boolean expression will be replaced by an equivalent with removing unwise \
+       conjunction"
+  | Unwise_ite ->
+    Format.sprintf
+      "(Fix `If_bool` lint):\n%s"
+      "This boolean expression will be replaced by an equivalent with removing \
+       unwise`if_then_else`"
+;;
+
+let check_bool args vbool =
   let _, val1 = List.nth args 0 in
   let _, val2 = List.nth args 1 in
   let open Tast_pattern in
@@ -24,13 +40,25 @@ let check_bool e args vbool =
       e1.exp_loc
       ~on_error:(fun _ () ->
         match vbool with
-        | true -> set_payload_bool { location = gen_loc e1.exp_loc e2.exp_loc (End, End); payload = Default } (* fname e1.exp_loc e2.exp_loc End End *)
-        | false -> set_payload_bool { location = gen_loc e1.exp_loc e2.exp_loc (Start, Start); payload = Default} ) (* fname e1.exp_loc e2.exp_loc Start Start *)
+        | true ->
+          set_payload
+            { location = gen_loc e1.exp_loc e2.exp_loc (End, End); payload = Default }
+            (msg Unwise_conjuction)
+        | false ->
+          set_payload
+            { location = gen_loc e1.exp_loc e2.exp_loc (Start, Start); payload = Default }
+            (msg Unwise_conjuction))
       e1
       (fun _ () ->
         match vbool with
-        | true -> set_payload_bool {location = gen_loc e1.exp_loc e2.exp_loc (Start, Start); payload = Default }  (* fname e1.exp_loc e2.exp_loc Start Start *)
-        | false -> set_payload_bool {location = gen_loc e1.exp_loc e2.exp_loc (End, End); payload = Default} ) (* fname e1.exp_loc e2.exp_loc End End*)
+        | true ->
+          set_payload
+            { location = gen_loc e1.exp_loc e2.exp_loc (Start, Start); payload = Default }
+            (msg Unwise_conjuction)
+        | false ->
+          set_payload
+            { location = gen_loc e1.exp_loc e2.exp_loc (End, End); payload = Default }
+            (msg Unwise_conjuction))
       ()
   | _ -> failwith "invalid_arg"
 ;;
@@ -39,22 +67,30 @@ let get_ite_loc e ie te ee (pbool_site, ebool) =
   let match_ite = function
     | If, true, _ ->
       (* if true then x else y --> x *)
-      (* get_payload2 fname e.exp_loc te.exp_loc *)
-      set_payload_bool {location = gen_loc e.exp_loc te.exp_loc (Start, Start); payload = Default};
-      set_payload_bool {location = gen_loc te.exp_loc e.exp_loc (End, End); payload = Default};
+      set_payload
+        { location = gen_loc e.exp_loc te.exp_loc (Start, Start); payload = Default }
+        (msg Unwise_ite);
+      set_payload
+        { location = gen_loc te.exp_loc e.exp_loc (End, End); payload = Default }
+        (msg Unwise_ite)
     | If, false, _ (* if false then x else y --> y *)
     | Then, true, Some true (* if val then true else true --> true *)
     | Then, false, Some false ->
       (* if val then false else false --> false*)
-      (* get_payload2 fname e.exp_loc ee.exp_loc *)
-      set_payload_bool {location = gen_loc e.exp_loc ee.exp_loc (Start, Start); payload = Default}
+      set_payload
+        { location = gen_loc e.exp_loc ee.exp_loc (Start, Start); payload = Default }
+        (msg Unwise_ite)
     | Then, true, Some false (* if val then true else false --> val *) ->
-      set_payload_bool {location = gen_loc e.exp_loc ie.exp_loc (Start, Start); payload = Default}; (* выдает неправильную локу в случае применения оператора && *)
-      set_payload_bool {location = gen_loc ie.exp_loc e.exp_loc (End, End); payload = Default}
+      set_payload
+        { location = gen_loc e.exp_loc ie.exp_loc (Start, Start); payload = Default }
+        (msg Unwise_ite);
+      (* выдает неправильную локу в случае применения оператора && *)
+      set_payload
+        { location = gen_loc ie.exp_loc e.exp_loc (End, End); payload = Default }
+        (msg Unwise_ite)
     | Then, false, Some true ->
       (* if val then false else true --> not val *)
       ()
-      (* get_payload2 fname e.exp_loc ie.exp_loc *)
     | _ ->
       (* previous p-m covers cases when ebool was parsed in then-e*)
       ()
@@ -89,19 +125,19 @@ end = struct
         ({ exp_env = _exp_env; exp_loc = _exp_loc; exp_desc; exp_extra = _exp_extra; _ }
          as this) =
         (match exp_desc with
-         | Texp_apply (f, args) ->
+         | Texp_apply (_, args) ->
            let pat =
              let open Tast_pattern in
              texp_apply2 (texp_ident (path [ "Stdlib"; "&&" ])) ebool drop
              ||| texp_apply2 (texp_ident (path [ "Stdlib"; "&&" ])) drop ebool
-             |> map1 ~f:(fun b -> check_bool this args b)
+             |> map1 ~f:(fun b -> check_bool args b)
            in
            Tast_pattern.parse
              pat
              this.exp_loc
              ~on_error:(fun _desc () -> ())
              this
-             (fun s () -> ())
+             (fun _ () -> ())
              ()
          | Texp_ifthenelse (ie, te, ee) ->
            let pat =
@@ -134,54 +170,3 @@ end = struct
     end
   ;;
 end
-
-(* еще надо понимать, что replacements могут в теории перекрывать друг друга; расставлять что-то типа приоритета или хз*)
-
-let a x y = if true then x else y
-(*
-   let a x y =              x       |
-*)
-
-let a x y = if false then x else y
-(*
-   let a x y =                      y|
-*)
-
-let a x = if x then true else false
-(*
-   let a x =    x                     |
-*)
-
-let a x = if x then false else true
-(*
-   let a x =not x                     |
-*)
-
-let a x = if x then false else false
-(*
-   let a x =                      false|
-*)
-
-let a x = if x then true else true
-(*
-   let a x =                     true|
-*)
-
-let a x = if x && true then 1 else 2
-(*
-   let a x = if x         then 1 else 2 *)
-
-let a x = if x && false then 1 else 2
-(*
-   let a x = if      false then 1 else 2
-*)
-
-let a x = if true && x then 1 else 2
-(*
-   let a x = if         x then 1 else 2
-*)
-
-let a x = if false && x then 1 else 2
-(*
-   let a x = if false      then 1 else 2
-*)

@@ -9,6 +9,23 @@ let first_case cs =
   List.nth cs 0
 ;;
 
+type fix_kind =
+  | Extra_argument
+  | Verbose_match
+
+let msg = function
+  | Extra_argument ->
+    Format.sprintf
+      "(Fix `Propose_function` lint)\n%s"
+      "Removing extra argument of an expression with replacing `match .. with ` to \
+       `function`"
+  | Verbose_match ->
+    Format.sprintf
+      "(Fix `Propose_function` lint)\n%s"
+      "This pattern matching will be replaced by an equivalent and more concise \
+       construction `function`"
+;;
+
 let get_match_constr_payload ematch_case =
   let open Typedtree in
   let e =
@@ -27,8 +44,15 @@ let get_match_constr_payload ematch_case =
       in
       let cloc = gen_loc e.exp_loc pat.pat_loc (Start, Start) in
       let funcloc = gen_constr_loc e.exp_loc 8 in
-      set_payload_pf { location = {cloc with loc_start = {cloc.loc_start with pos_cnum = cloc.loc_start.pos_cnum + 8}}; payload = Default };
-      set_payload_pf { location = funcloc; payload = Padding "function" })
+      set_payload
+        { location =
+            { cloc with
+              loc_start = { cloc.loc_start with pos_cnum = cloc.loc_start.pos_cnum + 8 }
+            }
+        ; payload = Default
+        }
+        (msg Verbose_match);
+      set_payload { location = funcloc; payload = Padding "function" } (msg Verbose_match))
     ()
 ;;
 
@@ -39,7 +63,7 @@ let get_propose_function_payload ematch_case =
     c.c_lhs
   in
   let cloc = gen_loc extra_arg.pat_loc extra_arg.pat_loc (Start, End) in
-  set_payload_pf { location = cloc; payload = Default }
+  set_payload { location = cloc; payload = Default } (msg Extra_argument)
 ;;
 
 let no_ident ident c =
@@ -143,9 +167,3 @@ end = struct
     end
   ;;
 end
-
-let a x y =
-  match y with
-  | 1 -> true
-  | _ -> x
-;;

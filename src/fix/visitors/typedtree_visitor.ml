@@ -1,4 +1,4 @@
-open Asttypes (* tt_case *)
+open Asttypes
 open Types
 module Base = Typedtree
 open Base
@@ -87,10 +87,10 @@ and expression_desc = Base.expression_desc =
   | Texp_match of
       expression
       * (computation tt_case) list
-      * partial (* ((Base.computation [@opaque]) [@opaque])*)
+      * partial
   | Texp_try of
       expression
-      * (value tt_case) list (* ((Base.value [@opaque]) [@opaque])*)
+      * (value tt_case) list
   | Texp_tuple of expression list
   | Texp_construct of
       Longident_visitor.longident_t loc
@@ -144,7 +144,7 @@ and expression_desc = Base.expression_desc =
       { let_ : binding_op
       ; ands : binding_op list
       ; param : Ident_visitor.ident_t
-      ; body : (value tt_case[@opaque] (* ((Base.value [@opaque])[@opaque]) *))
+      ; body : (value tt_case[@opaque])
       ; partial : partial
       }
   | Texp_unreachable
@@ -180,7 +180,6 @@ and function_body =
   | Tfunction_body of expression
   | Tfunction_cases of
       { cases : (value tt_case) list
-          (* ((Base.value [@opaque]) [@opaque]) *)
       ; partial : partial
       ; param : Ident_visitor.ident_t
       ; loc : Location_visitor.location_t
@@ -201,7 +200,6 @@ and binding_op = Base.binding_op =
   ; bop_loc : Location_visitor.location_t
   }
 
-(* Value expressions for the class language *)
 and class_expr = Base.class_expr =
   { cl_desc : class_expr_desc
   ; cl_loc : Location_visitor.location_t
@@ -227,7 +225,6 @@ and class_expr_desc = Base.class_expr_desc =
       * class_expr
   | Tcl_constraint of
       class_expr * class_type option * string list * string list * (MethSet.t[@opaque])
-    (* Visible instance variables, methods and concrete methods *)
   | Tcl_open of open_description * class_expr
 
 and class_structure = Base.class_structure =
@@ -254,14 +251,12 @@ and class_field_desc = Base.class_field_desc =
       * string option
       * (string * Ident_visitor.ident_t) list
       * (string * Ident_visitor.ident_t) list
-    (* Inherited instance variables and concrete methods *)
   | Tcf_val of string loc * mutable_flag * Ident_visitor.ident_t * class_field_kind * bool
   | Tcf_method of string loc * private_flag * class_field_kind
   | Tcf_constraint of core_type * core_type
   | Tcf_initializer of expression
   | Tcf_attribute of attribute
 
-(* Value expressions for the module language *)
 and module_expr = Base.module_expr =
   { mod_desc : module_expr_desc
   ; mod_loc : Location_visitor.location_t
@@ -361,7 +356,6 @@ and module_type_desc = Base.module_type_desc =
   | Tmty_typeof of module_expr
   | Tmty_alias of Path_visitor.path_t * Longident_visitor.longident_t loc
 
-(* Keep primitive and information for and-based lambda-code specialization *)
 and primitive_coercion = Base.primitive_coercion =
   { pc_desc : (Primitive.description[@opaque] (*??*))
   ; pc_type : Types_visitor.ty_type_expr
@@ -377,7 +371,7 @@ and signature = Base.signature =
 
 and signature_item = Base.signature_item =
   { sig_desc : signature_item_desc
-  ; sig_env : Env_visitor.env_t (* BINANNOT ADDED *)
+  ; sig_env : Env_visitor.env_t
   ; sig_loc : Location_visitor.location_t
   }
 
@@ -435,9 +429,7 @@ and 'a open_infos = 'a Base.open_infos =
 
 and open_description = (Base.open_description[@opaque])
 
-(*= (Path_visitor.path_t * Longident_visitor.longident_t loc) open_infos *)
 and open_declaration = (Base.open_declaration[@opaque])
-(* = module_expr open_infos *)
 
 and 'a include_infos = 'a Base.include_infos =
   { incl_mod : 'a
@@ -448,9 +440,7 @@ and 'a include_infos = 'a Base.include_infos =
 
 and include_description = (Base.include_description[@opaque])
 
-(* = module_type include_infos *)
 and include_declaration = (Base.include_declaration[@opaque])
-(* = module_expr include_infos*)
 
 and with_constraint = Base.with_constraint =
   | Twith_type of type_declaration
@@ -461,10 +451,10 @@ and with_constraint = Base.with_constraint =
   | Twith_modtypesubst of module_type
 
 and core_type = Base.core_type =
-  { (* mutable because of [Typeclass.declare_method] *)
+  {
     mutable ctyp_desc : core_type_desc
   ; mutable ctyp_type : Types_visitor.ty_type_expr
-  ; ctyp_env : Env_visitor.env_t (* BINANNOT ADDED *)
+  ; ctyp_env : Env_visitor.env_t
   ; ctyp_loc : Location_visitor.location_t
   ; ctyp_attributes : attribute list
   }
@@ -626,13 +616,10 @@ and class_type_field_desc = Base.class_type_field_desc =
   | Tctf_attribute of attribute
 
 and class_declaration = (Base.class_declaration[@opaque])
-(* class_expr class_infos *)
 
 and class_description = (Base.class_description[@opaque])
-(* class_type class_infos *)
 
 and class_type_declaration = (Base.class_type_declaration[@opaque])
-(* class_type class_infos *)
 
 and 'a class_infos = 'a Base.class_infos =
   { ci_virt : virtual_flag
