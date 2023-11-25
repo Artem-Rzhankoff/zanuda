@@ -2,14 +2,13 @@
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 
-open Visitors
 open Typedtree
 open Utils
 
 type ite =
-  | If
-  | Then
-  | Else
+  | If of bool
+  | Then of bool
+  | Else of bool
 
 let bool_value e =
   let open Tast_pattern in
@@ -17,16 +16,20 @@ let bool_value e =
 ;;
 
 type fix_kind =
-  | Unwise_conjuction
-  | Unwise_ite
+  | Unwise_conjuction of bool
+  | Unwise_ite of ite
+
+type msg_kind =
+  | Ite
+  | Conj
 
 let msg = function
-  | Unwise_conjuction ->
+  | Conj ->
     Format.sprintf
       "(Fix `If_bool` lint)\n%s"
       "This boolean expression will be replaced by an equivalent with removing unwise \
        conjunction"
-  | Unwise_ite ->
+  | Ite ->
     Format.sprintf
       "(Fix `If_bool` lint):\n%s"
       "This boolean expression will be replaced by an equivalent with removing \
@@ -47,130 +50,73 @@ let check_bool args vbool =
         | true ->
           set_payload
             { location = gen_loc e1.exp_loc e2.exp_loc (End, End); payload = Default }
-            (msg Unwise_conjuction)
+            (msg Conj)
         | false ->
           set_payload
             { location = gen_loc e1.exp_loc e2.exp_loc (Start, Start); payload = Default }
-            (msg Unwise_conjuction))
+            (msg Conj))
       e1
       (fun _ () ->
         match vbool with
         | true ->
           set_payload
             { location = gen_loc e1.exp_loc e2.exp_loc (Start, Start); payload = Default }
-            (msg Unwise_conjuction)
+            (msg Conj)
         | false ->
           set_payload
             { location = gen_loc e1.exp_loc e2.exp_loc (End, End); payload = Default }
-            (msg Unwise_conjuction))
+            (msg Conj))
       ()
   | _ -> failwith "invalid_arg"
 ;;
 
-let get_ite_loc e ie te ee (pbool_site, ebool) =
+let get_ite_loc e ie te ee pbool_site =
   let match_ite = function
-    | If, true, _ ->
+    | If true, _ ->
       (* if true then x else y --> x *)
       set_payload
         { location = gen_loc e.exp_loc te.exp_loc (Start, Start); payload = Default }
-        (msg Unwise_ite);
+        (msg Ite);
+      (* поменять *)
       set_payload
         { location = gen_loc te.exp_loc e.exp_loc (End, End); payload = Default }
-        (msg Unwise_ite)
-    | If, false, _ (* if false then x else y --> y *)
-    | Then, true, Some true (* if val then true else true --> true *)
-    | Then, false, Some false ->
+        (msg Ite)
+    | If false, _ (* if false then x else y --> y *)
+    | Then true, Some true (* if val then true else true --> true *)
+    | Then false, Some false ->
       (* if val then false else false --> false*)
       set_payload
         { location = gen_loc e.exp_loc ee.exp_loc (Start, Start); payload = Default }
-        (msg Unwise_ite)
-    | Then, true, Some false (* if val then true else false --> val *) ->
+        (msg Ite)
+    | Then true, Some false (* if val then true else false --> val *) ->
       set_payload
         { location = gen_loc e.exp_loc ie.exp_loc (Start, Start); payload = Default }
-        (msg Unwise_ite);
-      (* выдает неправильную локу в случае применения оператора && *)
+        (msg Ite);
       set_payload
         { location = gen_loc ie.exp_loc e.exp_loc (End, End); payload = Default }
-        (msg Unwise_ite)
-    | Then, false, Some true ->
+        (msg Ite)
+    | Then false, Some true ->
       (* if val then false else true --> not val *)
       ()
     | _ ->
       (* previous p-m covers cases when ebool was parsed in then-e*)
       ()
   in
-  match_ite (pbool_site, ebool, bool_value ee)
+  match_ite (pbool_site, bool_value ee)
 ;;
 
-module rec Lint : sig
-  include module type of struct
-    let visitor
-      : < visit_Closed : Location.t -> _
-        ; visit_tt_case :
-            'a.
-            (Location.t -> 'a -> unit)
-            -> Location.t
-            -> 'a Typedtree_visitor.tt_case
-            -> unit
-        ; .. >
-      =
-      object (_self)
-        inherit [_] Lint_refactoring.result_iter
-      end
-    ;;
-  end
-end = struct
-  let visitor =
-    object (_self)
-      inherit [_] Lint_refactoring.result_iter as super
+type a =
+  | A of bool
+  | B of bool
+  | C of bool
 
-      method! visit_expression
-        env
-        ({ exp_env = _exp_env; exp_loc = _exp_loc; exp_desc; exp_extra = _exp_extra; _ }
-         as this) =
-        (match exp_desc with
-         | Texp_apply (_, args) ->
-           let pat =
-             let open Tast_pattern in
-             texp_apply2 (texp_ident (path [ "Stdlib"; "&&" ])) ebool drop
-             ||| texp_apply2 (texp_ident (path [ "Stdlib"; "&&" ])) drop ebool
-             |> map1 ~f:(fun b -> check_bool args b)
-           in
-           Tast_pattern.parse
-             pat
-             this.exp_loc
-             ~on_error:(fun _desc () -> ())
-             this
-             (fun _ () -> ())
-             ()
-         | Texp_ifthenelse (ie, te, ee) ->
-           let pat =
-             let open Tast_pattern in
-             let ite =
-               texp_ite ebool drop drop
-               |> map1 ~f:(fun b ->
-                 get_ite_loc this ie te (Option.get ee) (If, b);
-                 b)
-               ||| (texp_ite drop ebool drop
-                    |> map1 ~f:(fun b ->
-                      get_ite_loc this ie te (Option.get ee) (Then, b);
-                      b))
-               ||| (texp_ite drop drop (some ebool)
-                    |> map1 ~f:(fun b ->
-                      get_ite_loc this ie te (Option.get ee) (Else, b);
-                      b))
-             in
-             ite
-           in
-           Tast_pattern.parse
-             pat
-             this.exp_loc
-             ~on_error:(fun _desc () -> ())
-             this
-             (fun _ () -> ())
-             ()
-         | _ -> ());
-        super#visit_expression env this
-    end
-  ;;
-end
+let get_loc exp = function
+  | Unwise_conjuction ebool ->
+    (match exp.exp_desc with
+     | Texp_apply (_, args) -> check_bool args ebool
+     | _ -> failwith "invalid_arg")
+  | Unwise_ite ite_type ->
+    (match exp.exp_desc with
+     | Texp_ifthenelse (ie, te, ee) -> get_ite_loc exp ie te (Option.get ee) ite_type
+     | _ -> failwith "invalid_arg")
+;;

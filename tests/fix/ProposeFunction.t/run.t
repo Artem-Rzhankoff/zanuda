@@ -4,7 +4,7 @@
              ^
   Error (warning 27 [unused-var-strict]): unused variable x.
   [1]
-  $ zanuda -fix .
+  $ zanuda -dir .
   File "ProposeFunction.ml", lines 7-8, characters 10-4:
   7 | ..........with
   8 |   | .........

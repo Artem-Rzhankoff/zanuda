@@ -11,7 +11,6 @@ type mode =
   | Dump_text
   | File of string
   | Dir of string
-  | Fix of string
 
 type t =
   { mutable outfile : string option
@@ -54,7 +53,6 @@ let set_dump_file s = set_mode (Dump_json s)
 let set_dump_text () = set_mode Dump_text
 let set_in_file s = set_mode (File s)
 let set_in_dir s = set_mode (Dir s)
-let set_in_fix s = set_mode (Fix s)
 (** Other switches *)
 
 let add_include s = opts.extra_includes <- s :: opts.extra_includes
@@ -127,7 +125,6 @@ let parse_args () =
     ; ( "-skip-level-allow"
       , Arg.Bool set_skip_level_allow
       , "[bool] Skip lints with level = Allow" )
-    ; ("-fix", Arg.String set_in_fix, "asdf")
     ]
   in
   let extra_args =

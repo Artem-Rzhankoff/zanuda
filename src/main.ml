@@ -248,12 +248,6 @@ let () =
         ~cmti:process_cmti_typedtree
         path;
       CollectedLints.report ()
-    | Fix path -> 
-      FixLints.Fix_lints.refactor
-      ~untyped:process_untyped
-      ~cmt:process_cmt_typedtree
-      ~cmti:process_cmti_typedtree
-      path;
   in
   ()
 ;;

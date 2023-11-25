@@ -1,5 +1,5 @@
   $ dune build
-  $ zanuda -fix .
+  $ zanuda -dir .
   File "IfBool.ml", line 2, characters 11-14:
   2 | let _f x = if x then true else false
                  ^^^

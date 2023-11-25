@@ -1,8 +1,0 @@
-(library
- (name FixLints)
- (libraries zanuda_core Visitors Refactoring)
- (modules Fix_lints)
- (preprocess
-  (pps ppx_sexp_conv visitors.ppx))
- (instrumentation
-  (backend bisect_ppx)))
