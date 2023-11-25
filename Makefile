@@ -28,7 +28,7 @@ clean:
 	@$(RM) -r _coverage
 
 TEST_COV_D = /tmp/zanudacov
-COVERAGE_OPTS = --coverage-path $(TEST_COV_D) --expect src/ --expect review/
+COVERAGE_OPTS = --coverage-path $(TEST_COV_D) --expect src/ --expect review/ --do-not-expect src/fix/visitors/
 
 .PHONY: test_coverage coverage
 test_coverage: coverage

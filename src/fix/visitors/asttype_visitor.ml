@@ -1,3 +1,7 @@
+(** Copyright 2021-2023, Kakadu. *)
+
+(** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
 type constant = Asttypes.constant =
   | Const_int of int
   | Const_char of char

@@ -38,6 +38,7 @@
   ppx_assert
   ppx_expect
   bisect_ppx
+  visitors
   stdune
   (angstrom
    (>= 0.15.0))

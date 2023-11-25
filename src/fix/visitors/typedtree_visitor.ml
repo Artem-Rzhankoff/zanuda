@@ -1,3 +1,7 @@
+(** Copyright 2021-2023, Kakadu. *)
+
+(** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
 open Asttypes
 open Types
 module Base = Typedtree
@@ -18,14 +22,11 @@ and attributes = attribute list
   | Value : (Base.value [@opaque]) pattern_category
   | Computation : (Base.computation [@opaque]) pattern_category*)
 and value = Base.value = Value_pattern
-
 and computation = Base.computation = Computation_pattern
-
-and 'k general_pattern = ('k Base.pattern_desc [@opaque]) pattern_data [@opaque]
-
+and 'k general_pattern = (('k Base.pattern_desc[@opaque]) pattern_data[@opaque])
 
 and 'a pattern_data = 'a Base.pattern_data =
-  { pat_desc : 'a 
+  { pat_desc : 'a
   ; pat_loc : Location_visitor.location_t
   ; pat_extra : (pat_extra * Location_visitor.location_t * attribute list) list
   ; pat_type : Types_visitor.ty_type_expr [@opaque]
@@ -80,17 +81,12 @@ and expression_desc = Base.expression_desc =
   | Texp_function of
       { arg_label : Asttype_visitor.arg_label
       ; param : Ident_visitor.ident_t
-      ; cases : (value tt_case) list
+      ; cases : value tt_case list
       ; partial : partial
       }
   | Texp_apply of expression * (Asttype_visitor.arg_label * expression option) list
-  | Texp_match of
-      expression
-      * (computation tt_case) list
-      * partial
-  | Texp_try of
-      expression
-      * (value tt_case) list
+  | Texp_match of expression * computation tt_case list * partial
+  | Texp_try of expression * value tt_case list
   | Texp_tuple of expression list
   | Texp_construct of
       Longident_visitor.longident_t loc
@@ -156,12 +152,11 @@ and meth = Base.meth =
   | Tmeth_val of Ident_visitor.ident_t
   | Tmeth_ancestor of Ident_visitor.ident_t * Path_visitor.path_t
 
- and 'k tt_case = 'k Base.case = {
-  c_lhs: 'k general_pattern;
-  c_guard: expression option;
-  c_rhs: expression;
-}
- 
+and 'k tt_case = 'k Base.case =
+  { c_lhs : 'k general_pattern
+  ; c_guard : expression option
+  ; c_rhs : expression
+  }
 
 and function_param =
   { fp_arg_label : Asttype_visitor.arg_label
@@ -179,7 +174,7 @@ and function_param_kind =
 and function_body =
   | Tfunction_body of expression
   | Tfunction_cases of
-      { cases : (value tt_case) list
+      { cases : value tt_case list
       ; partial : partial
       ; param : Ident_visitor.ident_t
       ; loc : Location_visitor.location_t
@@ -241,7 +236,7 @@ and class_field = Base.class_field =
   }
 
 and class_field_kind = Base.class_field_kind =
-  | Tcfk_virtual of core_type 
+  | Tcfk_virtual of core_type
   | Tcfk_concrete of override_flag * expression
 
 and class_field_desc = Base.class_field_desc =
@@ -428,7 +423,6 @@ and 'a open_infos = 'a Base.open_infos =
   }
 
 and open_description = (Base.open_description[@opaque])
-
 and open_declaration = (Base.open_declaration[@opaque])
 
 and 'a include_infos = 'a Base.include_infos =
@@ -439,7 +433,6 @@ and 'a include_infos = 'a Base.include_infos =
   }
 
 and include_description = (Base.include_description[@opaque])
-
 and include_declaration = (Base.include_declaration[@opaque])
 
 and with_constraint = Base.with_constraint =
@@ -451,8 +444,7 @@ and with_constraint = Base.with_constraint =
   | Twith_modtypesubst of module_type
 
 and core_type = Base.core_type =
-  {
-    mutable ctyp_desc : core_type_desc
+  { mutable ctyp_desc : core_type_desc
   ; mutable ctyp_type : Types_visitor.ty_type_expr
   ; ctyp_env : Env_visitor.env_t
   ; ctyp_loc : Location_visitor.location_t
@@ -616,9 +608,7 @@ and class_type_field_desc = Base.class_type_field_desc =
   | Tctf_attribute of attribute
 
 and class_declaration = (Base.class_declaration[@opaque])
-
 and class_description = (Base.class_description[@opaque])
-
 and class_type_declaration = (Base.class_type_declaration[@opaque])
 
 and 'a class_infos = 'a Base.class_infos =
@@ -644,9 +634,9 @@ and implementation =
   }
 [@@deriving
   visitors
-    { variety = "iter";
-    polymorphic = true;
-    monomorphic = [ "'env"]
+    { variety = "iter"
+    ; polymorphic = true
+    ; monomorphic = [ "'env" ]
     ; ancestors = [ "Env_visitor.iter"; "Types_visitor.iter" ]
     ; nude = true
     }]

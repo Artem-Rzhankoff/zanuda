@@ -1,3 +1,5 @@
 (library
  (name Replacement)
- (libraries zanuda_core))
+ (libraries zanuda_core)
+ (instrumentation
+  (backend bisect_ppx)))

@@ -1,7 +1,11 @@
+(** Copyright 2021-2023, Kakadu. *)
+
+(** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
 open Asttypes
 module Base = Types
 
-type ty_type_expr = (Base.type_expr[@opaque]) [@opaque]
+type ty_type_expr = (Base.type_expr[@opaque] [@opaque])
 
 and ty_type_desc = Base.type_desc =
   | Tvar of string option
@@ -18,7 +22,8 @@ and ty_type_desc = Base.type_desc =
   | Tpoly of ty_type_expr * ty_type_expr list
   | Tpackage of Path_visitor.path_t * (Longident_visitor.longident_t * ty_type_expr) list
 
-and ty_row_desc = (Base.row_desc[@opaque]) [@opaque] (* hope this is temporary*)
+and ty_row_desc = (Base.row_desc[@opaque] [@opaque])
+(* hope this is temporary*)
 (* and ty_row_field = Base.row_field*)
 
 and ty_abbrev_memo = Base.abbrev_memo =
@@ -27,8 +32,8 @@ and ty_abbrev_memo = Base.abbrev_memo =
       private_flag * Path_visitor.path_t * ty_type_expr * ty_type_expr * ty_abbrev_memo
   | Mlink of ty_abbrev_memo ref
 
-and ty_field_kind = (Base.field_kind[@opaque]) [@opaque]
-and ty_commutable = (Base.commutable[@opaque]) [@opaque]
+and ty_field_kind = (Base.field_kind[@opaque] [@opaque])
+and ty_commutable = (Base.commutable[@opaque] [@opaque])
 
 and ty_value_description = Base.value_description =
   { val_type : ty_type_expr
@@ -53,13 +58,12 @@ and ty_self_meths = Base.self_meths =
   | Self_concrete of (Ident_visitor.ident_t Base.Meths.t[@opaque])
   | Self_virtual of (Ident_visitor.ident_t Base.Meths.t[@opaque]) ref
 
-and variance_t = (Base.Variance.t[@opaque]) [@opaque]
+and variance_t = (Base.Variance.t[@opaque] [@opaque])
 
 (* and variance_f = Base.Variance.f =
    May_pos | May_neg | May_weak | Inj | Pos | Neg | Inv *)
 (* This type is not referred to by anything else. *)
 (* and foo = Base.Separability.t [@opaque] *)
-
 and ty_type_declaration = Base.type_declaration =
   { type_params : ty_type_expr list
   ; type_arity : int
@@ -67,13 +71,12 @@ and ty_type_declaration = Base.type_declaration =
   ; type_private : private_flag
   ; type_manifest : ty_type_expr option
   ; type_variance : variance_t list
-  ; type_separability : (Base.Separability.t [@opaque]) list
+  ; type_separability : (Base.Separability.t[@opaque]) list
   ; type_is_newtype : bool
   ; type_expansion_scope : int
   ; type_loc : Location_visitor.location_t
   ; type_attributes : (Parsetree.attributes[@opaque])
-  ; type_immediate :
-      (Type_immediacy.t[@opaque])
+  ; type_immediate : (Type_immediacy.t[@opaque])
   ; type_unboxed_default : bool
   ; type_uid : (Shape.Uid.t[@opaque])
   }
