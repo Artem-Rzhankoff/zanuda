@@ -129,8 +129,16 @@ let apply_all repls fcontent =
   Buffer.contents buf
 ;;
 
+let get_gen_rule f fgen = 
+  let open Pervasives in 
+  let oc = open_out_gen [Open_append; Open_creat] 0o666 "fix_gen/dune.gen" in 
+  Printf.fprintf oc "(rule\n (alias gen)\n (action (diff %s %s)))\n" f fgen;
+  close_out oc
+;;
+
 (*[TEMPORARY] we plan use a combination if dune diff and promote (maybe git variant) for user preview*)
 let apply_all _ =
+  let _status =  Sys.command "./fix_gen/clean_dir.sh" in 
   let file_content fname = In_channel.with_open_text fname In_channel.input_all in
   let new_payloads =
     FileRepl.fold
@@ -139,13 +147,20 @@ let apply_all _ =
       !repls
       []
   in
-  List.iter
-    (fun (fpath, payload) ->
-      (* match Sys.command (Format.sprintf "echo '%s' > %s" payload fpath) with
-      | 0 -> ()
-      | _ -> print_string "damn\n";
-      *)
-      let oc = open_out fpath in 
-      Printf.fprintf oc "%s" payload)
-    new_payloads
+  let acc = 
+  List.fold_left
+    (fun acc (fpath, payload) ->
+      let pcs = String.split_on_char '/' fpath in
+      let fpath_cor = List.nth pcs (List.length pcs - 1) ^ ".corrected" in
+      let fpath_cor = "fix_gen/" ^ fpath_cor in 
+      let oc = open_out fpath_cor in 
+      Printf.fprintf oc "%s" payload;
+      close_out oc;
+      get_gen_rule fpath fpath_cor; acc + 1)
+    0
+    new_payloads in
+  let _status = Sys.command "dune build @gen" in 
+  match _status = acc with 
+    | true -> print_string "wow\n"
+    | _ -> ()
 ;;

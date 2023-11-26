@@ -249,5 +249,6 @@ let () =
         path;
       CollectedLints.report ()
   in
+  Replacement.Repl.apply_all ();
   ()
 ;;

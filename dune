@@ -7,3 +7,5 @@
 
 (cram
  (deps %{bin:mylinter}))
+
+(include fix_gen/dune.gen)
