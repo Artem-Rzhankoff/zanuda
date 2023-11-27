@@ -42,15 +42,16 @@ let get_match_constr_payload ematch_case =
       in
       let cloc = gen_loc e.exp_loc pat.pat_loc (Start, Start) in
       let funcloc = gen_constr_loc e.exp_loc 8 in
+      (* тут еще надо будет чекнуть комменты *)
+      set_payload { location = funcloc; payload = Padding "function" } (msg Verbose_match);
       set_payload
         { location =
             { cloc with
               loc_start = { cloc.loc_start with pos_cnum = cloc.loc_start.pos_cnum + 8 }
             }
-        ; payload = Default
+        ; payload = Space_padding
         }
-        (msg Verbose_match);
-      set_payload { location = funcloc; payload = Padding "function" } (msg Verbose_match))
+        (msg Verbose_match))
     ()
 ;;
 
@@ -60,7 +61,7 @@ let get_propose_function_payload ematch_case =
     c.c_lhs
   in
   let cloc = gen_loc extra_arg.pat_loc extra_arg.pat_loc (Start, End) in
-  set_payload { location = cloc; payload = Default } (msg Extra_argument)
+  set_payload { location = cloc; payload = Void } (msg Extra_argument)
 ;;
 
 let get_loc = function
