@@ -47,25 +47,13 @@ let check_bool args vbool =
       e1.exp_loc
       ~on_error:(fun _ () ->
         match vbool with
-        | true ->
-          set_payload
-            { location = gen_loc e1.exp_loc e2.exp_loc (End, End); payload = Void }
-            (msg Conj)
-        | false ->
-          set_payload
-            { location = gen_loc e1.exp_loc e2.exp_loc (Start, Start); payload = Void }
-            (msg Conj))
+        | true -> set_payload_exp e1 e2 (End, End) Void (msg Conj)
+        | false -> set_payload_exp e1 e2 (Start, Start) Void (msg Conj))
       e1
       (fun _ () ->
         match vbool with
-        | true ->
-          set_payload
-            { location = gen_loc e1.exp_loc e2.exp_loc (Start, Start); payload = Void }
-            (msg Conj)
-        | false ->
-          set_payload
-            { location = gen_loc e1.exp_loc e2.exp_loc (End, End); payload = Void }
-            (msg Conj))
+        | true -> set_payload_exp e1 e2 (Start, Start) Void (msg Conj)
+        | false -> set_payload_exp e1 e2 (End, End) Void (msg Conj))
       ()
   | _ -> failwith "invalid_arg"
 ;;
@@ -74,31 +62,21 @@ let get_ite_loc e ie te ee pbool_site =
   let match_ite = function
     | If true, _ ->
       (* if true then x else y --> x *)
-      set_payload
-        { location = gen_loc e.exp_loc te.exp_loc (Start, Start); payload = Void }
-        (msg Ite);
-      (* поменять *)
-      set_payload
-        { location = gen_loc te.exp_loc e.exp_loc (End, End); payload = Void }
-        (msg Ite)
+      set_payload_exp e te (Start, Start) Void (msg Ite);
+      set_payload_exp te e (End, End) Void (msg Ite)
     | If false, _ (* if false then x else y --> y *)
     | Then true, Some true (* if val then true else true --> true *)
     | Then false, Some false ->
       (* if val then false else false --> false*)
-      set_payload
-        { location = gen_loc e.exp_loc ee.exp_loc (Start, Start); payload = Void }
-        (msg Ite)
+      set_payload_exp e ee (Start, Start) Void (msg Ite)
     | Then true, Some false (* if val then true else false --> val *) ->
-      set_payload
-        { location = gen_loc e.exp_loc ie.exp_loc (Start, Start); payload = Void }
-        (msg Ite);
-      set_payload
-        { location = gen_loc ie.exp_loc e.exp_loc (End, End); payload = Void }
-        (msg Ite)
+      set_payload_exp e ie (Start, Start) Void (msg Ite);
+      set_payload_exp ie e (End, End) Void (msg Ite)
     | Then false, Some true ->
       (* if val then false else true --> not val *)
-      (* ну короче надо просто понять*)
-      ()
+      set_payload_exp e ie (Start, Start) Void (msg Ite);
+      set_payload_exp ie ie (Start, Start) (Padding "not ") (msg Ite);
+      set_payload_exp ie e (End, End) Void (msg Ite)
     | _ ->
       (* previous p-m covers cases when ebool was parsed in then-e*)
       ()
@@ -117,5 +95,3 @@ let get_loc exp = function
      | _ -> failwith "invalid_arg")
 ;;
 
-(* val --> not val *)
-(* *)

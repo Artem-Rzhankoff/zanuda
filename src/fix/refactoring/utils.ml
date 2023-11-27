@@ -4,7 +4,7 @@
 
 open Location
 open Typedtree
-open Replacement.Repl 
+open Replacement.Refill
 
 type pos =
   | Start
@@ -17,8 +17,7 @@ module Report = struct
     let fname = loc.loc_start.pos_fname in
     let msg ppf s = Format.fprintf ppf "%s\n%!" s in
     Report.txt ~loc ~filename:fname Format.std_formatter msg ms
-  
-end
+end 
 
 let gen_loc spoint epoint = function
   | Start, Start ->
@@ -36,9 +35,13 @@ let gen_constr_loc point offset =
   let loc_start = point.loc_start in
   let loc_end = {pos_fname = loc_start.pos_fname; pos_lnum = loc_start.pos_lnum; pos_bol = loc_start.pos_bol; pos_cnum = loc_start.pos_cnum + offset} in
   {point with loc_end = loc_end }
-  
+
 let set_payload ({location; _} as r) msg = 
   Report.console location msg;
-  Replacement.Repl.add location.loc_start.pos_fname r
+  add location.loc_start.pos_fname r
 ;;
+
+let set_payload_exp e1 e2 pos payload = 
+  let open Typedtree in
+  set_payload {location = gen_loc e1.exp_loc e2.exp_loc pos; payload }
 
