@@ -20,6 +20,7 @@ depends: [
   "bisect_ppx"
   "visitors"
   "stdune"
+  "dune-build-info"
   "angstrom" {>= "0.15.0"}
   "base" {with-test}
   "ppx_fields_conv" {with-test}

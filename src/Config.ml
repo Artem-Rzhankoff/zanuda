@@ -121,10 +121,18 @@ let parse_args () =
       , "Set prefix to prepend to pathes in OUTPUT file" )
     ; "-I", Arg.String add_include, "Add extra include path for type checking"
       (* ; "-ws", Arg.String set_workspace, "[FILE] Set dune workspace root" *)
-    ; "-v", Arg.Unit set_verbose, "More verbose output"
     ; ( "-skip-level-allow"
       , Arg.Bool set_skip_level_allow
       , "[bool] Skip lints with level = Allow" )
+    ; "-v", Arg.Unit set_verbose, "More verbose output"
+    ; ( "-version"
+      , Arg.Unit
+          (fun () ->
+            let open Build_info.V1 in
+            Printf.printf
+              "version: %s\n"
+              (Option.fold ~none:"n/a" ~some:Version.to_string (version ())))
+      , " print version" )
     ]
   in
   let extra_args =
@@ -141,9 +149,10 @@ let parse_args () =
         , " Disable checking for this lint" )
         :: acc)
       opts.enabled_lints
+    |> List.sort (fun (a, _, _) (b, _, _) -> String.compare a b)
   in
   Arg.parse
-    (standard_args @ List.rev extra_args)
+    (standard_args @ extra_args)
     set_in_file
     "Use -dir [PATH] to check dune-based project"
 ;;

@@ -40,6 +40,7 @@
   bisect_ppx
   visitors
   stdune
+  dune-build-info
   (angstrom
    (>= 0.15.0))
   (base :with-test)
