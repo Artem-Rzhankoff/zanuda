@@ -250,6 +250,6 @@ let () =
         path;
       CollectedLints.report ()
   in
-  Replacement.Repl.apply_all ();
+  Replacement.Refill.apply_all ();
   ()
 ;;

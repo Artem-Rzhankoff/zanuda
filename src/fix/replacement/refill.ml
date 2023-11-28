@@ -18,10 +18,14 @@ module OrderedType = struct
     }
 
   let compare
-    { location = { loc_start = { pos_cnum = p; _ }; _ }; _ }
-    { location = { loc_start = { pos_cnum = p'; _ }; _ }; _ }
+    { location = { loc_start = { pos_cnum = sc; _ }; loc_end = { pos_cnum = ec; _ }; _ }
+    ; _
+    }
+    { location = { loc_start = { pos_cnum = sc'; _ }; loc_end = { pos_cnum = ec'; _ }; _ }
+    ; _
+    }
     =
-    p - p'
+    if sc = sc' then ec - ec' else sc - sc'
   ;;
 end
 
@@ -49,7 +53,8 @@ let add fname r =
 
 let mk loc p = { location = loc; payload = p }
 let location { location; _ } = location
-
+(* сюда надо только передавать координаты старой конструкции *)
+(* добавить кейс, где линтер неправильно срабатывает*)
 
 let apply_all repls fcontent =
   let flines = Array.of_list (String.split_on_char '\n' fcontent) in
@@ -66,7 +71,6 @@ let apply_all repls fcontent =
       in
       cur := loc_end)
     else
-      (
       print_string
       @@ Printf.sprintf
            "damn. Maybe lint recognized a false constr. file: %s line_st: %d col_st: %d \
@@ -75,7 +79,7 @@ let apply_all repls fcontent =
            loc_start.pos_lnum
            (loc_start.pos_cnum - loc_start.pos_bol)
            loc_end.pos_lnum
-           (loc_end.pos_cnum - loc_end.pos_bol));
+           (loc_end.pos_cnum - loc_end.pos_bol);
     buf
   in
   let buf = Buffer.create (String.length fcontent) in
@@ -91,23 +95,10 @@ let apply_all repls fcontent =
   Buffer.contents buf
 ;;
 
-let get_gen_rule f fgen =
-  let open Pervasives in
-  let oc = open_out_gen [ Open_append; Open_creat ] 0o666 "fix_gen/get_diff.sh" in
-  Printf.fprintf oc "diff %s %s;\n" f fgen;
-  (* заставить показывать только файлы, где произошли изменения*)
-  close_out oc;
-  let oc = open_out_gen [ Open_append; Open_creat ] 0o666 "fix_gen/promote.sh" in
-  Printf.fprintf oc "cat %s > %s;\n" fgen f;
-  close_out oc
-;;
+open Log
 
-(*[TEMPORARY] we plan use a combination if dune diff and promote (maybe git variant) for user preview*)
 let apply_all _ =
-  let _status =
-    Sys.command "mkdir fix_gen; echo > fix_gen/get_diff.sh; echo > fix_gen/promote.sh"
-  in
-  let file_content fname = In_channel.with_open_text fname In_channel.input_all in
+  create_promote_script;
   let new_payloads =
     FileRepl.fold
       (fun fname frepls fr_acc ->
@@ -115,22 +106,10 @@ let apply_all _ =
       !repls
       []
   in
-  let acc =
-    List.fold_left
-      (fun acc (fpath, payload) ->
-        let pcs = String.split_on_char '/' fpath in
-        let fpath_cor = List.nth pcs (List.length pcs - 1) ^ ".corrected" in
-        let fpath_cor = "fix_gen/" ^ fpath_cor in
-        let oc = open_out fpath_cor in
-        Printf.fprintf oc "%s" payload;
-        close_out oc;
-        get_gen_rule fpath fpath_cor;
-        acc + 1)
-      0
-      new_payloads
-  in
-  let _status = Sys.command "./fix_gen/get_diff.sh" in
-  match _status = acc with
-  | true -> print_string "wow\n"
-  | _ -> ()
+  List.iter
+    (fun (file, payload) ->
+      let corrected_file = name_corrected_file file in
+      gen_corrected_file corrected_file payload;
+      diff_log file corrected_file)
+    new_payloads
 ;;

@@ -67,7 +67,7 @@ let payload_between_repls (loc_end_buf, loc_start_repl) flines buf =
       let lines =
         Array.fold_left
           (fun ls l -> Format.sprintf "%s%s\n" ls l)
-          (Format.sprintf "%s%s" lines "\n")
+          (Format.sprintf "%s\n" lines)
           (Array.sub flines end_buf_line (repl_line - end_buf_line - 1))
       in
       let lines = lines ^ String.sub flines.(repl_line - 1) 0 repl_col in
