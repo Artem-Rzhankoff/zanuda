@@ -47,13 +47,13 @@ let check_bool args vbool =
       e1.exp_loc
       ~on_error:(fun _ () ->
         match vbool with
-        | true -> set_empty_padding (exp_end e1) (exp_end e2) (msg Conj);
-        | false -> set_empty_padding (exp_start e1) (exp_start e2) (msg Conj))
+        | true -> set_empty_padding (exp_end e1) (exp_end e2);
+        | false -> set_empty_padding (exp_start e1) (exp_start e2))
       e1
       (fun _ () ->
         match vbool with
-        | true -> set_empty_padding (exp_start e1) (exp_start e2) (msg Conj)
-        | false -> set_empty_padding (exp_end e1) (exp_end e2) (msg Conj))
+        | true -> set_empty_padding (exp_start e1) (exp_start e2)
+        | false -> set_empty_padding (exp_end e1) (exp_end e2))
       ()
   | _ -> failwith "invalid_arg"
 ;;
@@ -62,21 +62,21 @@ let get_ite_loc e ie te ee pbool_site =
   let match_ite = function
     | If true, _ ->
       (* if true then x else y --> x *)
-      set_empty_padding (exp_start e) (exp_start te) (msg Conj);
-      set_empty_padding (exp_end te) (exp_end e) (msg Conj)
+      set_empty_padding (exp_start e) (exp_start te);
+      set_empty_padding (exp_end te) (exp_end e)
     | If false, _ (* if false then x else y --> y *)
     | Then true, Some true (* if val then true else true --> true *)
     | Then false, Some false ->
       (* if val then false else false --> false*)
-      set_empty_padding (exp_start e) (exp_start ee) (msg Conj)
+      set_empty_padding (exp_start e) (exp_start ee)
     | Then true, Some false (* if val then true else false --> val *) ->
-      set_empty_padding (exp_start e) (exp_start ie) (msg Conj);
-      set_empty_padding (exp_end ie) (exp_end e) (msg Conj)
+      set_empty_padding (exp_start e) (exp_start ie);
+      set_empty_padding (exp_end ie) (exp_end e)
     | Then false, Some true ->
       (* if val then false else true --> not val *)
-      set_empty_padding (exp_start e) (exp_start ie) (msg Conj); (* ну как-то еще продумать логику, чтобы это не выглядело как костыль *)
-      set_padding (exp_start ie) (exp_start ie) (Padding "not ") (msg Ite); (* вообще по ощущениям нам не нужна особо лока для payload'a,*)
-      set_empty_padding (exp_end ie) (exp_end e) (msg Conj)
+      set_empty_padding (exp_start e) (exp_start ie); (* ну как-то еще продумать логику, чтобы это не выглядело как костыль *)
+      set_padding (exp_start ie) (exp_start ie) (Padding "not "); (* вообще по ощущениям нам не нужна особо лока для payload'a,*)
+      set_empty_padding (exp_end ie) (exp_end e)
     | _ ->
       (* previous p-m covers cases when ebool was parsed in then-e*)
       ()
@@ -84,7 +84,7 @@ let get_ite_loc e ie te ee pbool_site =
   match_ite (pbool_site, bool_value ee)
 ;;
 
-let get_loc exp = function (* заменить get_loc *)
+let apply_fix exp = function
   | Unwise_conjuction ebool ->
     (match exp.exp_desc with
      | Texp_apply (_, args) -> check_bool args ebool

@@ -7,6 +7,8 @@ let fgen_suffix = ".corrected"
 let diffs_file = gen_folder ^ "diffs.txt"
 let promote_script = gen_folder ^ "promote.sh"
 
+(* каждый раз очищать diff *)
+
 let create_promote_script =
   if not @@ Sys.file_exists gen_folder then Sys.mkdir gen_folder 0o755;
   match Sys.command (Format.sprintf "echo > %s" promote_script) with

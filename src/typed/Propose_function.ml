@@ -120,7 +120,7 @@ let run _ fallback =
                 (CollectedLints.add
                   ~loc
                   (report loc.Location.loc_start.Lexing.pos_fname ~loc);
-                Refactoring.ProposeFunction.get_loc expr.exp_desc)
+                Refactoring.ProposeFunction.apply_fix expr.exp_desc)
             | _ -> ())
           ();
         fallback.expr self expr)

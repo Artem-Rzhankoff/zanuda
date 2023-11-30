@@ -39,9 +39,9 @@ let get_match_constr_payload ematch_case =
       let pat =
         let c = first_case cs in
         c.c_lhs
-      in (* вот тут запускаем поиск комментов *)
-      set_padding (exp_start e) (pat_point pat Start)  Space_padding  (msg Verbose_match);
-      set_padding (exp_start e) (exp_start e) (Padding "function") (msg Verbose_match);)
+      in
+      set_padding (exp_start e) (pat_point pat Start)  Space_padding;
+      set_padding (exp_start e) (exp_start e) (Padding "function"))
     ()
 ;;
 
@@ -50,10 +50,10 @@ let get_propose_function_payload ematch_case =
     let c = first_case ematch_case in
     c.c_lhs
   in
-  set_empty_padding (pat_point extra_arg Start) (pat_point extra_arg End) (msg Extra_argument)
+  set_empty_padding (pat_point extra_arg Start) (pat_point extra_arg End)
 ;;
 
-let get_loc = function
+let apply_fix = function
   | Texp_function { cases } ->
     get_match_constr_payload cases;
     get_propose_function_payload cases

@@ -13,29 +13,89 @@ let shift_pos point content =
   | 1 -> { point with pos_cnum = point.pos_cnum + shift }
   | _ -> { point with pos_lnum = point.pos_lnum + len - 1; pos_bol = 0; pos_cnum = shift }
 ;;
+
 open Base
 
-let is_whitespace = Char.is_whitespace
+type token =
+  | Str
+  | Quoted_str
+  | Augth
 
-let lp pos = many_till any_char (string "(*") >>| 
-  fun s -> let pos = shift_pos pos (String.of_char_list s) in pos, "(*"
+type site =
+  | Inside_str
+  | Inside_quoted
+  | Outside
+
+let comm_inside_line tks =
+  Stdlib.List.fold_left
+    (fun site tk ->
+      match site, tk with
+      | Outside, Str | Inside_str, Quoted_str | Inside_str, Augth -> Inside_str
+      | Outside, Quoted_str | Inside_quoted, Str | Inside_quoted, Augth -> Inside_quoted
+      | Inside_str, Str | Inside_quoted, Quoted_str | Outside, Augth -> Outside)
+    Outside
+    tks
+;;
+
+let quoted_str ec sc =
+  peek_char
+  >>| fun c ->
+  match c with
+  | Some c -> if Char.equal c ec then sc, Quoted_str else sc, Augth
+  | None -> failwith "invalid_arg"
+;;
+
+let check_string =
+  any_char
+  >>= function
+  | '"' -> return ('"', Str)
+  | '{' -> quoted_str '|' '{'
+  | '|' -> quoted_str '}' '|'
+  | c -> return (c, Augth)
+;;
+
+let shift_str = function
+  | Inside_quoted ->
+    many_till any_char (string "|}") >>| fun l -> String.of_char_list l ^ "|}"
+  | Inside_str ->
+    many_till any_char (string "\"") >>| fun l -> String.of_char_list l ^ "\""
+  | Outside -> return ""
+;;
+
+let lp pos =
+  many_till check_string (string "(*")
+  >>| fun p ->
+  let s, tks = Stdlib.List.split p in
+  shift_pos pos (String.of_char_list s), comm_inside_line tks
+;;
 
 let rp = string "*)"
 
-let comm pos = 
+let comm pos coms site =
   lift2
-  (fun (pos, lp) s -> let comm = lp ^ s ^ "*)" in {pos with pos_cnum = pos.pos_cnum + 1}, shift_pos pos comm, comm)
-  (lp pos)
-  (many_till any_char rp >>| String.of_char_list )
+    (fun (spos, site) content ->
+      let comm = "(*" ^ content ^ "*)" in
+      let epos = shift_pos spos comm in
+      let coms =
+        match site with
+        | Outside -> ({ spos with pos_cnum = spos.pos_cnum + 1 }, epos, comm) :: coms
+        | _ -> coms
+      in
+      epos, coms, site)
+    (shift_str site >>= fun content -> lp (shift_pos pos content))
+    (many_till any_char rp >>| String.of_char_list)
+;;
 
-let parse_comm pos = many (comm pos)
+let comms pos =
+  let rec go (pos, acc, site) = comm pos acc site >>= go <|> return acc in
+  go (pos, [], Outside)
+;;
 
-let parse pos content = 
-  match parse_string ~consume:Consume.Prefix (parse_comm pos) content with 
+let parse pos content =
+  match parse_string ~consume:Consume.Prefix (comms pos) content with
   | Ok res -> res
   | _ -> []
-
-
+;;
 
 
 

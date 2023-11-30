@@ -100,7 +100,7 @@ let run _ fallback =
               CollectedLints.add
                 ~loc
                 (report loc.Location.loc_start.Lexing.pos_fname ~loc s);
-              Refactoring.IfBool.get_loc expr unwise_type)
+              Refactoring.IfBool.apply_fix expr unwise_type)
             ());
         fallback.expr self expr)
   ; structure_item =

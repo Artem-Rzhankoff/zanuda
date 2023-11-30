@@ -40,22 +40,18 @@ let gen_loc spoint epoint =
   { loc_start = position spoint; loc_end = position epoint; loc_ghost = false }
 ;;
 
-(* check loc_ghost *)
-
 let fname loc = loc.loc_start.pos_fname
 
-(* msg потом уберутся, когда что-то поопрятнее придумается *)
-let set_payload ({ location; _ } as r) msg =
-  Report.console location msg;
+let set_payload ({ location; _ } as r) =
   add (fname location) r
 ;;
 
-let set_padding p1 p2 payload msg =
+let set_padding p1 p2 payload =
   let location = gen_loc p1 p2 in
-  set_payload { location; payload } msg
+  set_payload { location; payload }
 ;;
 
-let set_empty_padding p1 p2 msg = set_padding p1 p2 Void msg
+let set_empty_padding p1 p2= set_padding p1 p2 Void
 
 let shift_point_cnum {loc; pos} offset =
   let open Lexing in
