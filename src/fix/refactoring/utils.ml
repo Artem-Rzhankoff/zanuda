@@ -31,24 +31,16 @@ let position { loc; pos } =
   | End -> loc.loc_end
 ;;
 
-let pat_point p point = 
-  {loc = p.pat_loc; pos = point}
-
-let exp_point e point =
-  { loc = e.exp_loc; pos = point }
-;;
-
-let exp_start e = 
-  exp_point e Start
-;;
-
-let exp_end e = 
-  exp_point e End
-;;
+let pat_point p point = { loc = p.pat_loc; pos = point }
+let exp_point e point = { loc = e.exp_loc; pos = point }
+let exp_start e = exp_point e Start
+let exp_end e = exp_point e End
 
 let gen_loc spoint epoint =
-  { loc_start = position spoint; loc_end = position epoint; loc_ghost = false } (* check loc_ghost *)
+  { loc_start = position spoint; loc_end = position epoint; loc_ghost = false }
 ;;
+
+(* check loc_ghost *)
 
 let fname loc = loc.loc_start.pos_fname
 
@@ -65,15 +57,9 @@ let set_padding p1 p2 payload msg =
 
 let set_empty_padding p1 p2 msg = set_padding p1 p2 Void msg
 
-let gen_constr_loc point offset =
+let shift_point_cnum {loc; pos} offset =
   let open Lexing in
-  let loc_start = point.loc_start in
-  let loc_end =
-    { pos_fname = loc_start.pos_fname
-    ; pos_lnum = loc_start.pos_lnum
-    ; pos_bol = loc_start.pos_bol
-    ; pos_cnum = loc_start.pos_cnum + offset
-    }
-  in
-  { point with loc_end }
+  match pos with 
+  | Start -> {loc = {loc with loc_start = {loc.loc_start with pos_cnum = loc.loc_start.pos_cnum + offset}}; pos}
+  | End -> {loc = {loc with loc_end = {loc.loc_end with pos_cnum = loc.loc_end.pos_cnum + offset}}; pos}
 ;;

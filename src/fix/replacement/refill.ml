@@ -53,8 +53,6 @@ let add fname r =
 
 let mk loc p = { location = loc; payload = p }
 let location { location; _ } = location
-(* сюда надо только передавать координаты старой конструкции *)
-(* добавить кейс, где линтер неправильно срабатывает*)
 
 let apply_all repls fcontent =
   let flines = Array.of_list (String.split_on_char '\n' fcontent) in
@@ -62,11 +60,11 @@ let apply_all repls fcontent =
   let apply_repl { location = { loc_start; loc_end; _ } as loc; payload } buf =
     if check_loc loc flines
     then (
-      let buf = payload_between_repls (!cur, loc_start) flines buf in
+      let buf = payload_between_repls_buf (!cur, loc_start) flines buf in
       let () =
         match payload with
         | Void -> ()
-        | Space_padding -> Buffer.add_string buf (space_padding loc flines)
+        | Space_padding -> Buffer.add_string buf (insert_comments loc fcontent)
         | Padding p -> Buffer.add_string buf p
       in
       cur := loc_end)
@@ -91,7 +89,7 @@ let apply_all repls fcontent =
     ; pos_fname = !cur.pos_fname
     }
   in
-  let buf = payload_between_repls (!cur, file_end) flines buf in
+  let buf = payload_between_repls_buf (!cur, file_end) flines buf in
   Buffer.contents buf
 ;;
 

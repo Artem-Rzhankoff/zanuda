@@ -39,7 +39,7 @@ let get_match_constr_payload ematch_case =
       let pat =
         let c = first_case cs in
         c.c_lhs
-      in
+      in (* вот тут запускаем поиск комментов *)
       set_padding (exp_start e) (pat_point pat Start)  Space_padding  (msg Verbose_match);
       set_padding (exp_start e) (exp_start e) (Padding "function") (msg Verbose_match);)
     ()
@@ -61,8 +61,8 @@ let get_loc = function
 ;;
 
 let a x = 
-  match x with 
-  | true -> 1
+  match x with(* *)
+ (* afvasd *) | true -> 1
   | false -> 2
 
 let a x = 
@@ -70,3 +70,14 @@ let a x =
   match x with
   | true -> 1
   | false -> 2
+
+
+  let a x = 
+    match x with    (*    *)
+   (* afvasd *) | true -> 1
+    | false -> 2
+
+let a x = 
+  match x with (*
+ asfaefaw    *) true -> 1
+     | false -> 2

@@ -19,9 +19,9 @@ let check_loc loc lines =
   && eline > 0
   && eline < Array.length lines
   && scol > 0
-  && scol <= (String.length lines.(sline - 1) + 1)
+  && scol <= String.length lines.(sline - 1) + 1
   && ecol > 0
-  && ecol <= (String.length lines.(eline - 1) + 1)
+  && ecol <= String.length lines.(eline - 1) + 1
   && eline - sline >= 0
   && (eline != sline || ecol - scol >= 0)
 ;;
@@ -47,7 +47,7 @@ let space_padding loc flines =
     padding
 ;;
 
-let payload_between_repls (loc_end_buf, loc_start_repl) flines buf =
+let payload_between_repls (loc_end_buf, loc_start_repl) flines =
   let end_buf_line, end_buf_col =
     loc_end_buf.pos_lnum, loc_end_buf.pos_cnum - loc_end_buf.pos_bol
   in
@@ -73,6 +73,51 @@ let payload_between_repls (loc_end_buf, loc_start_repl) flines buf =
       let lines = lines ^ String.sub flines.(repl_line - 1) 0 repl_col in
       lines
   in
+  payload
+;;
+
+let payload_between_repls_buf locs flines buf =
+  let payload = payload_between_repls locs flines in
   Buffer.add_string buf payload;
   buf
+;;
+
+let insert_comments ({ loc_start; loc_end; _ } as loc) fcontent =
+  let flines = Array.of_list (String.split_on_char '\n' fcontent) in
+  let chunk = payload_between_repls (loc_start, loc_end) flines in
+  let space_padding = space_padding loc flines in
+  let space_lines = Array.of_list (String.split_on_char '\n' space_padding) in
+  let comments = Comments_parser.parse loc_start chunk in
+  let shift n pos_comm =
+    if n = loc_start.pos_lnum
+    then pos_comm - (loc_start.pos_cnum - loc_start.pos_bol)
+    else pos_comm
+  in
+  match List.length comments with
+  | 0 -> space_padding
+  | _ ->
+    List.iter
+      (fun (spos, epos, comm) ->
+        let sline, scol, eline, ecol =
+          get_line_col { loc_start = spos; loc_end = epos; loc_ghost = false }
+        in
+        let rel_spos = shift sline scol in
+        let rel_epos = shift eline ecol in
+        let line = spos.pos_lnum - loc_start.pos_lnum in
+        let string = space_lines.(line) in
+        let new_string =
+          Printf.sprintf "%s%s%s"
+          (String.sub string 0 (rel_spos - 1))
+          comm
+          (String.sub string (rel_epos - 1) (String.length string - rel_epos))
+        in
+        Array.set space_lines line new_string)
+      comments;
+    let padding =
+      Array.fold_left
+        (fun content s -> Printf.sprintf "%s%s\n" content s)
+        ""
+        (Array.sub space_lines 0 (Array.length space_lines - 1))
+    in
+    padding ^ space_lines.(Array.length space_lines - 1)
 ;;
