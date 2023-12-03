@@ -93,10 +93,6 @@ let comms pos =
 
 let parse pos content =
   match parse_string ~consume:Consume.Prefix (comms pos) content with
-  | Ok res -> res
+  | Ok res -> List.rev res
   | _ -> []
 ;;
-
-
-
-

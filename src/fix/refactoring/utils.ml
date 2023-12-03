@@ -41,21 +41,31 @@ let gen_loc spoint epoint =
 ;;
 
 let fname loc = loc.loc_start.pos_fname
-
-let set_payload ({ location; _ } as r) =
-  add (fname location) r
-;;
+let set_payload ({ location; _ } as r) = add (fname location) r
 
 let set_padding p1 p2 payload =
   let location = gen_loc p1 p2 in
   set_payload { location; payload }
 ;;
 
-let set_empty_padding p1 p2= set_padding p1 p2 Void
+let set_empty_padding p1 p2 = set_padding p1 p2 Void
 
-let shift_point_cnum {loc; pos} offset =
-  let open Lexing in
-  match pos with 
-  | Start -> {loc = {loc with loc_start = {loc.loc_start with pos_cnum = loc.loc_start.pos_cnum + offset}}; pos}
-  | End -> {loc = {loc with loc_end = {loc.loc_end with pos_cnum = loc.loc_end.pos_cnum + offset}}; pos}
+open Lexing
+
+let shift_point_cnum { loc; pos } offset =
+  match pos with
+  | Start ->
+    { loc =
+        { loc with
+          loc_start = { loc.loc_start with pos_cnum = loc.loc_start.pos_cnum + offset }
+        }
+    ; pos
+    }
+  | End ->
+    { loc =
+        { loc with
+          loc_end = { loc.loc_end with pos_cnum = loc.loc_end.pos_cnum + offset }
+        }
+    ; pos
+    }
 ;;

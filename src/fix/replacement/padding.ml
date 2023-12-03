@@ -5,6 +5,11 @@
 open Location
 open Lexing
 
+type payload =
+  | Void
+  | Space_padding
+  | Padding of string
+
 let get_line_col loc =
   ( loc.loc_start.pos_lnum
   , loc.loc_start.pos_cnum - loc.loc_start.pos_bol
@@ -82,42 +87,72 @@ let payload_between_repls_buf locs flines buf =
   buf
 ;;
 
-let insert_comments ({ loc_start; loc_end; _ } as loc) fcontent =
-  let flines = Array.of_list (String.split_on_char '\n' fcontent) in
-  let chunk = payload_between_repls (loc_start, loc_end) flines in
-  let space_padding = space_padding loc flines in
-  let space_lines = Array.of_list (String.split_on_char '\n' space_padding) in
-  let comments = Comments_parser.parse loc_start chunk in
-  let shift n pos_comm =
-    if n = loc_start.pos_lnum
-    then pos_comm - (loc_start.pos_cnum - loc_start.pos_bol)
-    else pos_comm
+let get_col pos = pos.pos_cnum - pos.pos_bol
+let loc_from_pos spos epos = { loc_start = spos; loc_end = epos; loc_ghost = false }
+
+let compare_pos pos1 pos2 =
+  pos1.pos_lnum < pos2.pos_lnum
+  || (pos1.pos_lnum = pos2.pos_lnum && get_col pos1 <= get_col pos2)
+;;
+
+let nesting_loc loc1 loc2 =
+  compare_pos loc2.loc_start loc1.loc_start && compare_pos loc1.loc_end loc2.loc_end
+;;
+
+let comments_inside_loc comms fix_loc =
+  let rec sort acc = function
+    | ((spos, epos, _) as h) :: tl ->
+      if nesting_loc (loc_from_pos spos epos) fix_loc
+      then sort (h :: acc) tl
+      else if compare_pos epos fix_loc.loc_end
+      then sort acc tl
+      else acc
+    | _ -> acc
   in
-  match List.length comments with
-  | 0 -> space_padding
-  | _ ->
-    List.iter
-      (fun (spos, epos, comm) ->
-        let sline, scol, eline, ecol =
-          get_line_col { loc_start = spos; loc_end = epos; loc_ghost = false }
-        in
-        let rel_spos = shift sline scol in
-        let rel_epos = shift eline ecol in
-        let line = spos.pos_lnum - loc_start.pos_lnum in
-        let string = space_lines.(line) in
-        let new_string =
-          Printf.sprintf "%s%s%s"
-          (String.sub string 0 (rel_spos - 1))
-          comm
-          (String.sub string (rel_epos - 1) (String.length string - rel_epos))
-        in
-        Array.set space_lines line new_string)
-      comments;
-    let padding =
-      Array.fold_left
-        (fun content s -> Printf.sprintf "%s%s\n" content s)
+  sort [] comms
+;;
+
+let relative_pos st_pos pos =
+  let rel_lnum = pos.pos_lnum - st_pos.pos_lnum in
+  let rel_bol, rel_cnum =
+    match rel_lnum = 0 with
+    | true -> pos.pos_bol - st_pos.pos_bol, pos.pos_cnum - st_pos.pos_cnum
+    | false -> pos.pos_bol, pos.pos_cnum
+  in
+  { pos with pos_bol = rel_bol; pos_cnum = rel_cnum; pos_lnum = rel_lnum + 1 }
+;;
+
+let insert_comments ({ loc_start; loc_end; _ } as loc) flines fcoms =
+  let coms = List.rev (comments_inside_loc fcoms loc) in
+  let coms_padding =
+    List.fold_left (fun s (_, _, c) -> Printf.sprintf "%s %s" s c) "" coms
+  in
+  function
+  | Void -> coms_padding
+  | Padding s -> Printf.sprintf "%s %s" s coms_padding
+  | Space_padding ->
+    let padding = space_padding loc flines in
+    let lines = Array.of_list (String.split_on_char '\n' padding) in
+    let cur = ref (relative_pos loc_start loc_start) in
+    let payload =
+      List.fold_left
+        (fun acc (spos, epos, comm) ->
+          let rel_spos = relative_pos loc_start spos in
+          let rel_epos = relative_pos loc_start epos in
+          let pre_padding = payload_between_repls (!cur, rel_spos) lines in
+          let padding = pre_padding ^ comm in
+          let () = cur := rel_epos in
+          Printf.sprintf "%s%s" acc padding)
         ""
-        (Array.sub space_lines 0 (Array.length space_lines - 1))
+        coms
     in
-    padding ^ space_lines.(Array.length space_lines - 1)
+    let len = List.length coms in
+    (match len with
+     | 0 -> padding
+     | _ ->
+       let _, epos, _ = List.nth coms (List.length coms - 1) in
+       payload
+       ^ payload_between_repls
+           (relative_pos loc_start epos, relative_pos loc_start loc_end)
+           lines)
 ;;

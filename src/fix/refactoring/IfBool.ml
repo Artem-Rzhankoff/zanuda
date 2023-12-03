@@ -47,7 +47,7 @@ let check_bool args vbool =
       e1.exp_loc
       ~on_error:(fun _ () ->
         match vbool with
-        | true -> set_empty_padding (exp_end e1) (exp_end e2);
+        | true -> set_empty_padding (exp_end e1) (exp_end e2)
         | false -> set_empty_padding (exp_start e1) (exp_start e2))
       e1
       (fun _ () ->
@@ -74,8 +74,8 @@ let get_ite_loc e ie te ee pbool_site =
       set_empty_padding (exp_end ie) (exp_end e)
     | Then false, Some true ->
       (* if val then false else true --> not val *)
-      set_empty_padding (exp_start e) (exp_start ie); (* ну как-то еще продумать логику, чтобы это не выглядело как костыль *)
-      set_padding (exp_start ie) (exp_start ie) (Padding "not "); (* вообще по ощущениям нам не нужна особо лока для payload'a,*)
+      set_empty_padding (exp_start e) (exp_start ie);
+      set_padding (exp_start ie) (exp_start ie) (Padding "not ");
       set_empty_padding (exp_end ie) (exp_end e)
     | _ ->
       (* previous p-m covers cases when ebool was parsed in then-e*)
@@ -94,11 +94,3 @@ let apply_fix exp = function
      | Texp_ifthenelse (ie, te, ee) -> get_ite_loc exp ie te (Option.get ee) ite_type
      | _ -> failwith "invalid_arg")
 ;;
-
-let a x = if true then x else x + 1
-
-let a x = if x then true else false
-
-let a x = if x then false else true
-
-let a x y = if x && true then y else y + 1

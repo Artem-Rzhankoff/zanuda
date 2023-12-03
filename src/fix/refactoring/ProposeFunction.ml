@@ -40,8 +40,10 @@ let get_match_constr_payload ematch_case =
         let c = first_case cs in
         c.c_lhs
       in
-      set_padding (exp_start e) (pat_point pat Start)  Space_padding;
-      set_padding (exp_start e) (exp_start e) (Padding "function"))
+      let point = exp_start e in
+      let shift_point = shift_point_cnum point 5 in
+      set_padding shift_point (pat_point pat Start) Space_padding;
+      set_padding point shift_point (Padding "function"))
     ()
 ;;
 
@@ -59,25 +61,3 @@ let apply_fix = function
     get_propose_function_payload cases
   | _ -> failwith "invalid_arg"
 ;;
-
-let a x = 
-  match x with(* *)
- (* afvasd *) | true -> 1
-  | false -> 2
-
-let a x = 
-  let open Typedtree in 
-  match x with
-  | true -> 1
-  | false -> 2
-
-
-  let a x = 
-    match x with    (*    *)
-   (* afvasd *) | true -> 1
-    | false -> 2
-
-let a x = 
-  match x with (*
- asfaefaw    *) true -> 1
-     | false -> 2

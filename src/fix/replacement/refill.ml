@@ -6,11 +6,6 @@ open Location
 open Lexing
 open Padding
 
-type payload =
-  | Void
-  | Space_padding
-  | Padding of string
-
 module OrderedType = struct
   type t =
     { location : Location.t
@@ -56,28 +51,17 @@ let location { location; _ } = location
 
 let apply_all repls fcontent =
   let flines = Array.of_list (String.split_on_char '\n' fcontent) in
-  let cur = ref { dummy_pos with pos_lnum = 1; pos_cnum = 0; pos_bol = 0 } in
+  let start_pos = { dummy_pos with pos_lnum = 1; pos_cnum = 0; pos_bol = 0 } in
+  let cur = ref start_pos in
+  let coms = Comments_parser.parse start_pos fcontent in
   let apply_repl { location = { loc_start; loc_end; _ } as loc; payload } buf =
     if check_loc loc flines
     then (
       let buf = payload_between_repls_buf (!cur, loc_start) flines buf in
-      let () =
-        match payload with
-        | Void -> ()
-        | Space_padding -> Buffer.add_string buf (insert_comments loc fcontent)
-        | Padding p -> Buffer.add_string buf p
-      in
+      Buffer.add_string buf (insert_comments loc flines coms payload);
       cur := loc_end)
     else
-      print_string
-      @@ Printf.sprintf
-           "damn. Maybe lint recognized a false constr. file: %s line_st: %d col_st: %d \
-            line_end: %d col_end:%d\n"
-           loc_start.pos_fname
-           loc_start.pos_lnum
-           (loc_start.pos_cnum - loc_start.pos_bol)
-           loc_end.pos_lnum
-           (loc_end.pos_cnum - loc_end.pos_bol);
+      Log.Error.wrong_loc loc;
     buf
   in
   let buf = Buffer.create (String.length fcontent) in
@@ -96,7 +80,7 @@ let apply_all repls fcontent =
 open Log
 
 let apply_all _ =
-  create_promote_script;
+  prepare_env;
   let new_payloads =
     FileRepl.fold
       (fun fname frepls fr_acc ->

@@ -5,6 +5,6 @@
 open Utils
 
 let apply_fix location expr =
-  let content = Pprintast.string_of_expression expr in 
-  set_payload {location; payload = Padding content}
+  let content = Pprintast.string_of_expression expr in
+  set_payload { location; payload = Padding content }
 ;;
