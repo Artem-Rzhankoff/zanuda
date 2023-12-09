@@ -22,10 +22,6 @@
   Error: Wrong location for replacement
   File "FalseProposeFunction.ml", line 2, characters 5-0:
   Error: Wrong location for replacement
-  File "FalseProposeFunction.ml", line 7, characters 0-5:
-  7 | type closed_flag =
-      ^^^^^
-  Error: Wrong location for replacement
   File "FalseProposeFunction.ml", lines 7-10, characters 0-43:
    7 | type closed_flag =
    8 |   | Closed
@@ -40,4 +36,10 @@
   < type private_flag =
   ---
   > function private_flag =
+  7c7
+  < type closed_flag =
+  ---
+  > function closed_flag =
+
+
   
