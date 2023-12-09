@@ -44,3 +44,5 @@ let apply_fix = function
     get_propose_function_payload cases
   | _ -> failwith "invalid_arg"
 ;;
+
+let f x = match (* lvl1 (* lvl2*)*) x with true -> 0 | false -> 1
