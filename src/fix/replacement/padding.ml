@@ -33,7 +33,7 @@ let check_loc loc lines =
 
 let check_pos pos pos' =
   let col pos = pos.pos_cnum - pos.pos_bol in
-  pos.pos_lnum >= pos'.pos_lnum && col pos >= col pos'
+  (pos.pos_lnum = pos'.pos_lnum && col pos >= col pos') || pos.pos_lnum > pos'.pos_lnum
 ;;
 
 let space_padding loc flines =
