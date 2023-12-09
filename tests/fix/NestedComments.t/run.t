@@ -7,7 +7,7 @@
   ---
   > let f  = function   (* lvl1 (* lvl2*)          true -> 0 | false -> 1
   4c4
-  < let f x = if x (* (*nested_comment*) *) && true then x else false
+  < let f1 x = if x (* (*nested_comment*) *) && true then x else false
   ---
-  > let f x = if x (* (*nested_comment*) then x else false
+  > let f1 x = if x (* (*nested_comment*) then x else false
 
