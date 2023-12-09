@@ -7,7 +7,7 @@ module Format = Caml.Format
 open Zanuda_core
 open Zanuda_core.Utils
 open Refactoring.IfBool
-
+open Parsetree
 type input = Tast_iterator.iterator
 
 let lint_id = "if_bool"
@@ -65,16 +65,16 @@ let run _ fallback =
     let open Tast_pattern in
     let ite =
       texp_ite ebool drop drop
-      |> map1 ~f:(fun b -> Format.asprintf "Executing 'if %b' smells bad" b, (Unwise_ite (If b)))
+      |> map1 ~f:(fun b -> Format.asprintf "Executing 'if %b' smells bad" b, ite_if b)
       ||| (texp_ite drop ebool drop
-          |> map1 ~f:(fun b -> Format.asprintf "Executing 'if ... then %b' smells bad" b, (Unwise_ite (Then b))))
+          |> map1 ~f:(fun b -> Format.asprintf "Executing 'if ... then %b' smells bad" b, ite_then b))
       ||| (texp_ite drop drop (some ebool)
-          |> map1 ~f:(fun b -> Format.asprintf "Executing 'if ... then .. else %b' smells bad" b, (Unwise_ite (Else b))))
+          |> map1 ~f:(fun b -> Format.asprintf "Executing 'if ... then .. else %b' smells bad" b, ite_else b))
     in
     let ops =
       texp_apply2 (texp_ident (path [ "Stdlib"; "&&" ])) ebool drop
       ||| texp_apply2 (texp_ident (path [ "Stdlib"; "&&" ])) drop ebool
-      |> map1 ~f:(fun b -> Format.asprintf "Conjunction with boolean smells bad", (Unwise_conjuction b))
+      |> map1 ~f:(fun b -> Format.asprintf "Conjunction with boolean smells bad", conj b)
     in
     ite ||| ops
   in
