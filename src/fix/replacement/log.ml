@@ -9,9 +9,7 @@ let promote_script = fix_dir ^ "promote.sh"
 
 module Error = struct
   let wrong_loc loc =
-    let msg =
-      "Wrong location for replacement"
-    in
+    let msg = "Wrong location for replacement" in
     let r = Location.error msg ~loc in
     Location.print_report Format.err_formatter r
   ;;
@@ -73,21 +71,16 @@ let diff f fgen =
   | WSTOPPED signal -> failwith (Error.diff_stoped signal)
 ;;
 
-let write_diff fname diff = 
-  let oc = Out_channel.open_gen [Open_append] 0o666 diffs_file in
+let write_diff fname diff =
+  let oc = Out_channel.open_gen [ Open_append ] 0o666 diffs_file in
   Printf.fprintf oc "Diffs for file %s\n%s\n" fname diff;
   close_out oc
 ;;
-(*
-Out_channel.with_open_gen  [Open_append] 0o666 diffs_file Out_channel.output_string cmd;
-let cmd = Printf.sprintf "Diffs for file %s\n%s\n" fname diff in
-*)
 
 let diff_log f fgen =
   let diff_result = diff f fgen in
-  if String.equal diff_result ""
-  then ()
-  else (
+  if not @@ String.equal diff_result ""
+  then (
     write_diff f diff_result;
     add_promote f fgen)
 ;;

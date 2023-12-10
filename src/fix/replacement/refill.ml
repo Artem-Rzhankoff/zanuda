@@ -20,9 +20,7 @@ module OrderedType = struct
     ; _
     }
     =
-    if sc > sc' && ec < ec' then 0
-    else if sc = sc' then ec - ec' 
-    else sc - sc'
+    if sc > sc' && ec < ec' then 0 else if sc = sc' then ec - ec' else sc - sc'
   ;;
 end
 
@@ -62,8 +60,7 @@ let apply_all repls fcontent =
       let buf = payload_between_repls_buf (!cur, loc_start) flines buf in
       Buffer.add_string buf (insert_comments loc flines coms payload);
       cur := loc_end)
-    else
-      Log.Error.wrong_loc loc;
+    else Log.Error.wrong_loc loc;
     buf
   in
   let buf = Buffer.create (String.length fcontent) in
