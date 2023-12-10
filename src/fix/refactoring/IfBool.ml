@@ -24,24 +24,29 @@ let bool_value e =
   parse ebool e.exp_loc ~on_error:(fun _ () -> None) e (fun b () -> Some b) ()
 ;;
 
-(* Fix for unwise_conj assumes that the conj takes two arguments because at the time 
-  of implementation the linter can only detect the use of a conjuction with two arguments *)
+(* Fix for unwise_conj assumes that the conj takes two arguments because at the time
+   of implementation the linter can only detect the use of a conjuction with two arguments *)
 let check_bool args vbool =
-  let helper e e' f f' = function 
+  let helper e e' f f' = function
     | true -> set_empty_padding (f e) (f e')
     | false -> set_empty_padding (f' e) (f' e')
   in
-  if List.length args == 2
-  then (
+  match List.length args with
+  | 2 ->
     let _, v = List.nth args 0 in
     let _, v' = List.nth args 1 in
     let open Tast_pattern in
-    match v, v' with
-    | Some e, Some e' ->
-      parse ebool e.exp_loc 
-      ~on_error:(fun _ () -> helper e e' exp_end exp_start vbool)
-       e (fun _ () -> helper e e' exp_start exp_end vbool) ()
-    | _ -> failwith "invalid_arg")
+    (match v, v' with
+     | Some e, Some e' ->
+       parse
+         ebool
+         e.exp_loc
+         ~on_error:(fun _ () -> helper e e' exp_end exp_start vbool)
+         e
+         (fun _ () -> helper e e' exp_start exp_end vbool)
+         ()
+     | _ -> failwith "invalid_arg")
+  | _ -> ()
 ;;
 
 let get_ite_loc e ie te ee pbool_site =
